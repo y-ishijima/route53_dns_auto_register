@@ -15,6 +15,8 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
    「スキルファイルが更新されました。Cowork の設定からスキルを再アップロードしてください。」
 3. Desktop Commander の execute_command で以下を実行する:
    `npm install`
+4. Desktop Commander の execute_command で以下を実行する（ビルド。npm install で自動ビルドされない場合があるため必須）:
+   `npx tsc`
 
 ## 絶対ルール（全操作共通）
 
