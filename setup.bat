@@ -6,17 +6,21 @@ echo   店舗ネットワーク設定 登録ツール - セットアップ
 echo ============================================
 echo.
 
-REM --- 1. Node.js チェック ---
+REM --- 1. Node.js チェック・自動インストール ---
 echo [1/2] Node.js を確認中...
 where node >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo [エラー] Node.js がインストールされていません。
-    echo          インストールページを開きます...
-    start https://nodejs.org/
-    echo          ブラウザが開きます。Node.js v22.x LTS をインストールしてください。
-    echo          インストール後、このスクリプトをもう一度実行してください。
+    echo Node.js がインストールされていません。自動インストールします...
+    winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
+    if %ERRORLEVEL% NEQ 0 (
+        echo [エラー] Node.js のインストールに失敗しました。IT部門に連絡してください。
+        pause
+        exit /b 1
+    )
+    echo Node.js のインストールが完了しました。
+    echo このウィンドウを閉じて、setup.bat をもう一度実行してください。
     pause
-    exit /b 1
+    exit /b 0
 )
 echo   OK
 

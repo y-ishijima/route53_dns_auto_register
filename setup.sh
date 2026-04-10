@@ -5,7 +5,7 @@ echo "  店舗ネットワーク設定 登録ツール - セットアップ"
 echo "============================================"
 echo ""
 
-# ブラウザを開くヘルパー関数（macOS: open / Linux: xdg-open）
+# ブラウザを開くヘルパー関数
 open_browser() {
     local url="$1"
     if [[ "$(uname)" == "Darwin" ]]; then
@@ -15,15 +15,23 @@ open_browser() {
     fi
 }
 
-# --- 1. Node.js チェック ---
+# --- 1. Node.js チェック・自動インストール ---
 echo "[1/2] Node.js を確認中..."
 if ! command -v node &> /dev/null; then
-    echo "[エラー] Node.js がインストールされていません。"
-    echo "         インストールページを開きます..."
-    open_browser "https://nodejs.org/"
-    echo "         ブラウザが開きます。Node.js v22.x LTS をインストールしてください。"
-    echo "         インストール後、このスクリプトをもう一度実行してください。"
-    exit 1
+    echo "Node.js がインストールされていません。自動インストールを試みます..."
+    if command -v brew &> /dev/null; then
+        brew install node@22
+        if [ $? -ne 0 ]; then
+            echo "[エラー] Node.js のインストールに失敗しました。IT部門に連絡してください。"
+            exit 1
+        fi
+        echo "Node.js のインストールが完了しました。"
+    else
+        echo "[エラー] Homebrew がインストールされていません。"
+        echo "         以下のコマンドで Homebrew をインストールしてから、再度 setup.sh を実行してください:"
+        echo '         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+        exit 1
+    fi
 fi
 echo "  OK"
 

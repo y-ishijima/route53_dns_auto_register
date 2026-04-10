@@ -183,4 +183,13 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
    「テスト用のデータを削除します。実行してよいですか？」
 2. ユーザが承認したら、Desktop Commander の execute_command で以下を実行する:
    `npx dns-register delete-tests --env-file .env`
-3. 実行結果をユーザに表示する。
+3. 実行結果を確認する（タイムアウトした場合も次のステップに進む）。
+4. 30秒待機する。
+5. Desktop Commander の execute_command で以下を実行し、テストレコードが残っているか確認する:
+   `npx dns-register list-tests --env-file .env`
+6. テストレコードが残っている場合:
+   - 再度 `npx dns-register delete-tests --env-file .env` を実行する。
+   - 30秒待機してから `npx dns-register list-tests --env-file .env` で確認する。
+   - 最大3回までリトライする。3回リトライしても残っている場合は「テストレコードの削除に時間がかかっています。しばらく待ってから再度お試しください。」と表示する。
+7. テストレコードがなくなった場合:
+   「テストデータの削除が完了しました。」と表示する。
