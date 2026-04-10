@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.last-registration.json
+_temp_register.js
+run_*.js
+run_*.bat
+run_*.cmd

@@ -1,0 +1,27 @@
+{
+  "name": "dns-register",
+  "version": "2.0.0",
+  "description": "Route53 DNS登録CLIツール - 店舗ごとのDNSレコードを登録するCLIツール",
+  "main": "dist/cli.js",
+  "bin": {
+    "dns-register": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npx tsc",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "@aws-sdk/client-route-53": "^3.700.0",
+    "@inquirer/prompts": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "fast-check": "^4.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

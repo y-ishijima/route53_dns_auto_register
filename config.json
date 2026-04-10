@@ -1,0 +1,33 @@
+{
+  "yamaokayaZoneId": "ZPS49ZOFSRKVC",
+  "menkataZoneId": "Z06858143PXEUA7VN6S4G",
+  "region": "ap-northeast-1",
+  "ttl": {
+    "aRecord": 300,
+    "cnameAlias": 3600,
+    "menkataCname": 300
+  },
+  "aliases": [
+    { "type": "rt", "displayName": "ルーター" },
+    { "type": "sw", "displayName": "スイッチ" },
+    { "type": "prn", "displayName": "プリンタ" },
+    { "type": "cam", "displayName": "カメラ" },
+    { "type": "ap", "displayName": "アクセスポイント" },
+    { "type": "ap1", "displayName": "アクセスポイント1" },
+    { "type": "ap2", "displayName": "アクセスポイント2" },
+    { "type": "dl", "displayName": "デリシャス端末" },
+    { "type": "kb1", "displayName": "キッチンベル1" },
+    { "type": "kb2", "displayName": "キッチンベル2" },
+    { "type": "kp", "displayName": "キッチンプリンタ" },
+    { "type": "pc", "displayName": "PC" },
+    { "type": "enc0", "displayName": "エンコーダ0" },
+    { "type": "enc1", "displayName": "エンコーダ1" },
+    { "type": "enc2", "displayName": "エンコーダ2" },
+    { "type": "enc3", "displayName": "エンコーダ3" },
+    { "type": "enc4", "displayName": "エンコーダ4" },
+    { "type": "enc5", "displayName": "エンコーダ5" },
+    { "type": "enc6", "displayName": "エンコーダ6" },
+    { "type": "enc7", "displayName": "エンコーダ7" },
+    { "type": "ps", "displayName": "POSサーバー" }
+  ]
+}
