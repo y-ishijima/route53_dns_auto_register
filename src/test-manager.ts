@@ -24,10 +24,14 @@ export class TestRecordManager {
     let nextType: RRType | undefined;
 
     // ページネーション対応でテストレコードを収集
+    // テストプレフィックス範囲を超えた場合の早期終了フラグ
+    let pastPrefixRange = false;
+
     do {
       const command = new ListResourceRecordSetsCommand({
         HostedZoneId: zoneId,
-        ...(nextName && { StartRecordName: nextName }),
+        // 初回はテストプレフィックス位置からスキャン開始、以降はページネーション継続
+        StartRecordName: nextName ?? TestRecordManager.TEST_PREFIX,
         ...(nextType && { StartRecordType: nextType }),
       });
       const response = await this.route53Client.send(command);
@@ -36,6 +40,13 @@ export class TestRecordManager {
         const name = rrs.Name ?? '';
         // Route53はFQDN末尾にドットを付与するため、除去して判定
         const cleanName = name.endsWith('.') ? name.slice(0, -1) : name;
+
+        // テストプレフィックス範囲を超えた場合、早期終了
+        if (!cleanName.startsWith(TestRecordManager.TEST_PREFIX) && cleanName > TestRecordManager.TEST_PREFIX) {
+          pastPrefixRange = true;
+          break;
+        }
+
         if (cleanName.startsWith(TestRecordManager.TEST_PREFIX)) {
           for (const rr of rrs.ResourceRecords ?? []) {
             records.push({
@@ -46,6 +57,11 @@ export class TestRecordManager {
             });
           }
         }
+      }
+
+      // 早期終了フラグが立っている場合、ページネーションを終了
+      if (pastPrefixRange) {
+        break;
       }
 
       if (response.IsTruncated) {
@@ -60,15 +76,17 @@ export class TestRecordManager {
     return records;
   }
 
-  /** 両ゾーンのテストレコードを一括削除する */
-  async deleteAllTestRecords(config: Config): Promise<{
+  /** 両ゾーンのテストレコードを一括削除する（事前取得済みレコードを受け取る） */
+  async deleteAllTestRecords(
+    records: { yamaokayaRecords: DnsRecord[]; menkataRecords: DnsRecord[] },
+    config: Config
+  ): Promise<{
     deletedCount: number;
     failedCount: number;
     failures: Array<{ name: string; reason: string }>;
   }> {
-    // 両ゾーンからテストレコードを取得
-    const yamaokayaRecords = await this.listTestRecords(config.yamaokayaZoneId);
-    const menkataRecords = await this.listTestRecords(config.menkataZoneId);
+    // 事前取得済みレコードを使用（内部での再取得を排除）
+    const { yamaokayaRecords, menkataRecords } = records;
 
     if (yamaokayaRecords.length === 0 && menkataRecords.length === 0) {
       console.log('削除対象のテストレコードが見つかりません。');

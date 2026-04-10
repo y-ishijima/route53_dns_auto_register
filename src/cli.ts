@@ -424,8 +424,8 @@ async function handleDeleteTests(): Promise<void> {
   // 確認メッセージ
   console.log('\nテスト用のデータを削除します。本番環境には影響しません。\n');
 
-  // 一括削除実行
-  const result = await testManager.deleteAllTestRecords(config);
+  // 一括削除実行（事前取得済みレコードを渡し、内部での再取得を排除）
+  const result = await testManager.deleteAllTestRecords({ yamaokayaRecords, menkataRecords }, config);
 
   // 結果表示
   console.log('\n=== 削除結果 ===');
