@@ -139,14 +139,25 @@ async function handleEncodeName(args: Record<string, string | boolean>): Promise
   const txtRecordName = `${testPrefix}${shopCode}.yamaokaya.net`;
   const txtRecordValue = `"${base64Value}"`;
 
-  // Route53 API で TXT レコード登録（UPSERT で統一）
+  // 本番モード時: 重複チェック + CREATE
+  if (!testMode) {
+    const manager = new RecordManager(route53);
+    const isDuplicate = await manager.checkDuplicateTxt(txtRecordName, yamaokayaZoneId);
+    if (isDuplicate) {
+      console.error('このTXTレコードは既に登録されています。');
+      process.exit(1);
+    }
+  }
+  const action = testMode ? 'UPSERT' : 'CREATE';
+
+  // Route53 API で TXT レコード登録
   const command = new ChangeResourceRecordSetsCommand({
     HostedZoneId: yamaokayaZoneId,
     ChangeBatch: {
       Comment: 'DNS Auto Register: encode-name TXT record',
       Changes: [
         {
-          Action: 'UPSERT',
+          Action: action,
           ResourceRecordSet: {
             Name: txtRecordName,
             Type: 'TXT',
@@ -300,14 +311,25 @@ async function handleAddDevice(args: Record<string, string | boolean>): Promise<
   // CNAME レコード名
   const cnameRecordName = `${testPrefix}${device}.${shopCode}.yamaokaya.net`;
 
-  // Route53 API で CNAME 登録（常に UPSERT）
+  // 本番モード時: 重複チェック + CREATE
+  if (!testMode) {
+    const manager = new RecordManager(route53);
+    const isDuplicate = await manager.checkDuplicateCname(cnameRecordName, yamaokayaZoneId);
+    if (isDuplicate) {
+      console.error('このCNAMEレコードは既に登録されています。');
+      process.exit(1);
+    }
+  }
+  const action = testMode ? 'UPSERT' : 'CREATE';
+
+  // Route53 API で CNAME 登録
   const command = new ChangeResourceRecordSetsCommand({
     HostedZoneId: yamaokayaZoneId,
     ChangeBatch: {
       Comment: 'DNS Auto Register: add-device CNAME',
       Changes: [
         {
-          Action: 'UPSERT',
+          Action: action,
           ResourceRecordSet: {
             Name: cnameRecordName,
             Type: 'CNAME',

@@ -46,6 +46,46 @@ export class RecordManager {
     );
   }
 
+  /**
+   * 指定されたCNAMEレコードが既に存在するか確認する
+   * @param recordName 確認対象のFQDN（例: "rt.s001.yamaokaya.net"）
+   * @param zoneId ホストゾーンID
+   * @returns 存在する場合 true
+   */
+  async checkDuplicateCname(recordName: string, zoneId: string): Promise<boolean> {
+    const command = new ListResourceRecordSetsCommand({
+      HostedZoneId: zoneId,
+      StartRecordName: recordName,
+    });
+    const response = await this.route53Client.send(command);
+    const normalizedName = recordName.replace(/\.$/, '');
+    return (response.ResourceRecordSets ?? []).some(
+      (rrs) =>
+        rrs.Type === 'CNAME' &&
+        rrs.Name?.replace(/\.$/, '') === normalizedName
+    );
+  }
+
+  /**
+   * 指定されたTXTレコードが既に存在するか確認する
+   * @param recordName 確認対象のFQDN（例: "s001.yamaokaya.net"）
+   * @param zoneId ホストゾーンID
+   * @returns 存在する場合 true
+   */
+  async checkDuplicateTxt(recordName: string, zoneId: string): Promise<boolean> {
+    const command = new ListResourceRecordSetsCommand({
+      HostedZoneId: zoneId,
+      StartRecordName: recordName,
+    });
+    const response = await this.route53Client.send(command);
+    const normalizedName = recordName.replace(/\.$/, '');
+    return (response.ResourceRecordSets ?? []).some(
+      (rrs) =>
+        rrs.Type === 'TXT' &&
+        rrs.Name?.replace(/\.$/, '') === normalizedName
+    );
+  }
+
   /** レコード登録（yamaokaya.net → internal.menkata.me の順序） */
   async registerRecords(
     records: GeneratedRecords,
