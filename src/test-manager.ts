@@ -1,6 +1,6 @@
 /**
  * Test_Record_Manager
- * テストレコード（__dns_auto_test- プレフィックス付き）の一覧取得・一括削除を担当する
+ * テストレコード（auto_dns_test_ プレフィックス付き）の一覧取得・一括削除を担当する
  */
 
 import {
@@ -15,7 +15,7 @@ export class TestRecordManager {
   constructor(private route53Client: Route53Client) {}
 
   /** テストレコード識別用プレフィックス */
-  static readonly TEST_PREFIX = '__dns_auto_test-';
+  static readonly TEST_PREFIX = 'auto_dns_test_';
 
   /**
    * 指定ゾーンのテストレコード一覧を取得する
@@ -28,6 +28,7 @@ export class TestRecordManager {
     let nextType: RRType | undefined;
 
     // 初回のStartRecordName: ゾーンドメインが指定されていればFQDN形式で最適化
+    // テストレコードは auto_dns_test_{shopCode}.{zoneDomain} の形式
     const initialStartName = zoneDomain
       ? `${TestRecordManager.TEST_PREFIX}.${zoneDomain}`
       : undefined;

@@ -42,11 +42,11 @@ const TEST_CONFIG: Config = {
 };
 
 /** テストプレフィックス */
-const TEST_PREFIX = '__dns_auto_test-';
+const TEST_PREFIX = 'auto_dns_test_';
 
 // --- fast-check アービトラリ定義 ---
 
-/** テストレコード名を生成するアービトラリ（__dns_auto_test- プレフィックス付き） */
+/** テストレコード名を生成するアービトラリ（auto_dns_test_ プレフィックス付き） */
 const testRecordNameArb = fc.stringMatching(/^[a-z0-9][a-z0-9-]{0,20}$/).map(
   (suffix) => `${TEST_PREFIX}${suffix}`
 );
@@ -123,7 +123,7 @@ describe('保全プロパティテスト（修正実装前）', () => {
 
   /**
    * プロパティ1: 任意のゾーン内レコード構成に対して、listTestRecords は
-   * __dns_auto_test- プレフィックス付きレコードのみを返し、それ以外を含まないこと
+   * auto_dns_test_ プレフィックス付きレコードのみを返し、それ以外を含まないこと
    *
    * **Validates: Requirements 3.2, 3.3**
    */

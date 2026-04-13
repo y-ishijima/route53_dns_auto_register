@@ -16,7 +16,7 @@ import { TestRecordManager } from './test-manager';
 import type { Config, EncodeNameParams, EncodeNameResult, CreateRecordsParams, CreateRecordsResult, AddDeviceParams, AddDeviceResult, UndoResult, ListTestsResult, DeleteTestsResult } from './types';
 
 /** テストモード時のプレフィックス */
-const TEST_PREFIX = '__dns_auto_test-';
+const TEST_PREFIX = 'auto_dns_test_';
 
 /**
  * encode-name ハンドラ
@@ -24,7 +24,7 @@ const TEST_PREFIX = '__dns_auto_test-';
  *
  * - validateShopName, validateShopCodeでバリデーション
  * - 本番モード時はRecordManager.checkDuplicateTxtで重複チェック
- * - テストモード時は__dns_auto_test-プレフィックスを付与しUPSERTアクションで登録
+ * - テストモード時はauto_dns_test_プレフィックスを付与しUPSERTアクションで登録
  */
 export async function handleEncodeName(
   params: EncodeNameParams,
@@ -170,7 +170,7 @@ export async function handleCreateRecords(
  * - IPアドレス形式を検証（192.168.x.x、各オクテット0-255）
  * - Aレコード名を算出（第3・第4オクテットを3桁ゼロパディング）
  * - 本番モード時はRecordManager.checkDuplicateCnameで重複チェック
- * - テストモード時は__dns_auto_test-プレフィックスを付与しUPSERTアクションで登録
+ * - テストモード時はauto_dns_test_プレフィックスを付与しUPSERTアクションで登録
  */
 export async function handleAddDevice(
   params: AddDeviceParams,

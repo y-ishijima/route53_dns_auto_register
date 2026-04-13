@@ -86,7 +86,7 @@ describe('バグ条件探索テスト', () => {
   it('deleteAllTestRecords は内部で listTestRecords を呼び出さないこと（冗長呼び出しの排除）', async () => {
     // テストレコードを含むレスポンスを設定
     const testRecords = [
-      { name: '__dns_auto_test-001', type: 'A', value: '192.168.1.1' },
+      { name: 'auto_dns_test_001', type: 'A', value: '192.168.1.1' },
     ];
 
     // ListResourceRecordSetsCommand に対するレスポンス（listTestRecords 用）
@@ -105,7 +105,7 @@ describe('バグ条件探索テスト', () => {
 
     // 事前取得済みレコードを渡して deleteAllTestRecords を実行
     const preloadedRecords = {
-      yamaokayaRecords: [{ name: '__dns_auto_test-001', type: 'A' as const, value: '192.168.1.1', ttl: 300 }],
+      yamaokayaRecords: [{ name: 'auto_dns_test_001', type: 'A' as const, value: '192.168.1.1', ttl: 300 }],
       menkataRecords: [],
     };
     await testManager.deleteAllTestRecords(preloadedRecords, TEST_CONFIG);
@@ -129,7 +129,7 @@ describe('バグ条件探索テスト', () => {
     mockSend.mockResolvedValue(
       createListResponse([
         { name: 's1105.yamaokaya.net', type: 'A', value: '192.168.1.1' },
-        { name: '__dns_auto_test-s9999.yamaokaya.net', type: 'TXT', value: '"dGVzdA=="' },
+        { name: 'auto_dns_test_s9999.yamaokaya.net', type: 'TXT', value: '"dGVzdA=="' },
       ])
     );
 
@@ -137,7 +137,7 @@ describe('バグ条件探索テスト', () => {
 
     // テストプレフィックスに一致するレコードのみ収集されること
     expect(records).toHaveLength(1);
-    expect(records[0].name).toBe('__dns_auto_test-s9999.yamaokaya.net');
+    expect(records[0].name).toBe('auto_dns_test_s9999.yamaokaya.net');
     expect(records[0].type).toBe('TXT');
   });
 
@@ -154,13 +154,13 @@ describe('バグ条件探索テスト', () => {
     const page1 = createListResponse(
       [{ name: 's1105.yamaokaya.net', type: 'A', value: '192.168.1.1' }],
       true,
-      '__dns_auto_test-s9999.yamaokaya.net',
+      'auto_dns_test_s9999.yamaokaya.net',
       'TXT'
     );
 
     // ページ2: テストレコードを含む
     const page2 = createListResponse(
-      [{ name: '__dns_auto_test-s9999.yamaokaya.net', type: 'TXT', value: '"dGVzdA=="' }],
+      [{ name: 'auto_dns_test_s9999.yamaokaya.net', type: 'TXT', value: '"dGVzdA=="' }],
       false
     );
 
@@ -173,6 +173,6 @@ describe('バグ条件探索テスト', () => {
     // 全ページをスキャンしてテストレコードを収集すること
     expect(mockSend).toHaveBeenCalledTimes(2);
     expect(records).toHaveLength(1);
-    expect(records[0].name).toBe('__dns_auto_test-s9999.yamaokaya.net');
+    expect(records[0].name).toBe('auto_dns_test_s9999.yamaokaya.net');
   });
 });
