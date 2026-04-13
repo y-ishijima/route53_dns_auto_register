@@ -45,44 +45,7 @@ if %ERRORLEVEL% NEQ 0 (
 REM --- 4. Claude Desktop MCP設定 ---
 echo.
 echo Claude Desktop のMCPサーバーを設定中...
-
-REM Microsoft Store版のパスを検索
-set "CLAUDE_CONFIG_DIR="
-for /d %%D in ("%LOCALAPPDATA%\Packages\Claude_*") do (
-    set "CLAUDE_CONFIG_DIR=%%D\LocalCache\Roaming\Claude"
-)
-
-REM 通常版のパス
-if not defined CLAUDE_CONFIG_DIR (
-    if exist "%APPDATA%\Claude" (
-        set "CLAUDE_CONFIG_DIR=%APPDATA%\Claude"
-    )
-)
-
-if not defined CLAUDE_CONFIG_DIR (
-    echo   Claude Desktop が見つかりません。MCPサーバーの設定はスキップします。
-    goto :setup_done
-)
-
-set "CLAUDE_CONFIG=%CLAUDE_CONFIG_DIR%\claude_desktop_config.json"
-set "PROJECT_DIR=%CD:\=\\%"
-
-REM 既にdns-registerが設定済みか確認
-if exist "%CLAUDE_CONFIG%" (
-    findstr /C:"dns-register" "%CLAUDE_CONFIG%" >nul 2>&1
-    if %ERRORLEVEL% EQU 0 (
-        echo   MCPサーバーは既に設定済みです。
-        goto :setup_done
-    )
-)
-
-REM Node.jsスクリプトで安全にJSON編集
-node -e "const fs=require('fs');const p='%CLAUDE_CONFIG%'.replace(/\\\\/g,'\\');const d='%PROJECT_DIR%'.replace(/\\\\/g,'\\');let c={};try{c=JSON.parse(fs.readFileSync(p,'utf-8'))}catch{}if(!c.mcpServers)c.mcpServers={};c.mcpServers['dns-register']={command:'cmd',args:['/c','start-mcp.bat'],cwd:d};fs.writeFileSync(p,JSON.stringify(c,null,2),'utf-8');console.log('  MCPサーバーの設定を追加しました。')"
-if %ERRORLEVEL% NEQ 0 (
-    echo   MCPサーバーの設定に失敗しました。手動で設定してください。
-)
-
-:setup_done
+node -e "const fs=require('fs');const path=require('path');const os=require('os');const localAppData=process.env.LOCALAPPDATA||'';const appData=process.env.APPDATA||'';let configDir='';const pkgDir=path.join(localAppData,'Packages');if(fs.existsSync(pkgDir)){const dirs=fs.readdirSync(pkgDir).filter(d=>d.startsWith('Claude_'));if(dirs.length>0)configDir=path.join(pkgDir,dirs[0],'LocalCache','Roaming','Claude')}if(!configDir&&fs.existsSync(path.join(appData,'Claude'))){configDir=path.join(appData,'Claude')}if(!configDir){console.log('  Claude Desktop が見つかりません。MCPサーバーの設定はスキップします。');process.exit(0)}const configPath=path.join(configDir,'claude_desktop_config.json');let c={};try{c=JSON.parse(fs.readFileSync(configPath,'utf-8'))}catch{}if(c.mcpServers&&c.mcpServers['dns-register']){console.log('  MCPサーバーは既に設定済みです。');process.exit(0)}if(!c.mcpServers)c.mcpServers={};c.mcpServers['dns-register']={command:'cmd',args:['/c','start-mcp.bat'],cwd:process.cwd()};fs.writeFileSync(configPath,JSON.stringify(c,null,2),'utf-8');console.log('  MCPサーバーの設定を追加しました。')"
 
 echo.
 echo ============================================
