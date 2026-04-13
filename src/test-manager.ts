@@ -29,8 +29,10 @@ export class TestRecordManager {
 
     // 初回のStartRecordName: ゾーンドメインが指定されていればFQDN形式で最適化
     // テストレコードは auto_dns_test_{shopCode}.{zoneDomain} の形式
+    // Route53のDNSソートでは auto_dns_test_ の後に数字・英字が続くため、
+    // auto_dns_test_0 をStartRecordNameに指定してテストレコード付近からスキャン開始
     const initialStartName = zoneDomain
-      ? `${TestRecordManager.TEST_PREFIX}.${zoneDomain}`
+      ? `${TestRecordManager.TEST_PREFIX}0.${zoneDomain}`
       : undefined;
 
     let isFirstPage = true;
@@ -59,8 +61,9 @@ export class TestRecordManager {
               ttl: rrs.TTL ?? 300,
             });
           }
-        } else if (initialStartName && records.length > 0) {
-          // テストレコードを見つけた後にプレフィックス外のレコードが出現したら早期終了
+        } else if (initialStartName) {
+          // StartRecordName最適化時: プレフィックス外のレコードが出現したら早期終了
+          // テストレコードはDNSソート順で連続するため、プレフィックス外に到達したら残りは不要
           pastPrefixRange = true;
           break;
         }
