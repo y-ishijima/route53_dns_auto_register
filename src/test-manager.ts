@@ -51,7 +51,7 @@ export class TestRecordManager {
           for (const rr of rrs.ResourceRecords ?? []) {
             records.push({
               name: cleanName,
-              type: rrs.Type as 'A' | 'CNAME',
+              type: rrs.Type as 'A' | 'CNAME' | 'TXT',
               value: rr.Value ?? '',
               ttl: rrs.TTL ?? 300,
             });

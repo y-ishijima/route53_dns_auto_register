@@ -37,7 +37,7 @@ export interface DnsRecord {
   /** FQDN */
   name: string;
   /** レコードタイプ */
-  type: 'A' | 'CNAME';
+  type: 'A' | 'CNAME' | 'TXT';
   /** IPアドレスまたはCNAME参照先 */
   value: string;
   /** TTL値 */

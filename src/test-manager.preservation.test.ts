@@ -265,8 +265,8 @@ describe('保全プロパティテスト（修正実装前）', () => {
 
           // 空レコードを渡して deleteAllTestRecords を実行
           const emptyRecords = {
-            yamaokayaRecords: [] as Array<{ name: string; type: 'A' | 'CNAME'; value: string; ttl: number }>,
-            menkataRecords: [] as Array<{ name: string; type: 'A' | 'CNAME'; value: string; ttl: number }>,
+            yamaokayaRecords: [] as Array<{ name: string; type: 'A' | 'CNAME' | 'TXT'; value: string; ttl: number }>,
+            menkataRecords: [] as Array<{ name: string; type: 'A' | 'CNAME' | 'TXT'; value: string; ttl: number }>,
           };
           const result = await testManager.deleteAllTestRecords(emptyRecords, config);
 
