@@ -72,7 +72,9 @@ function handleAwsError(error: unknown) {
 /** MCPサーバーのメインエントリポイント */
 async function main(): Promise<void> {
   // .envファイルからAWS認証情報を読み込む
-  const envPath = resolve(process.cwd(), '.env');
+  // プロジェクトルートを特定（dist/mcp-server.jsの親ディレクトリ）
+  const projectRoot = resolve(__dirname, '..');
+  const envPath = resolve(projectRoot, '.env');
   if (!existsSync(envPath)) {
     console.error('.envファイルが見つかりません。');
     process.exit(1);
@@ -207,7 +209,7 @@ async function main(): Promise<void> {
     'セットアップ: git pull、npm install、ビルドを実行して最新状態にする',
     async () => {
       const results: Record<string, unknown> = { success: true };
-      const cwd = process.cwd();
+      const cwd = resolve(__dirname, '..');
       const timeout = 60_000;
 
       // git pull
