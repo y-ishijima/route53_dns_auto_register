@@ -56,8 +56,8 @@ Claude Desktop の Cowork 機能を使ってレコード登録を行う場合は
 {
   "mcpServers": {
     "dns-register": {
-      "command": "node",
-      "args": ["dist/mcp-server.js"],
+      "command": "cmd",
+      "args": ["/c", "start-mcp.bat"],
       "cwd": "/path/to/route53_dns_auto_register"
     }
   }
@@ -65,7 +65,8 @@ Claude Desktop の Cowork 機能を使ってレコード登録を行う場合は
 ```
 
    - `cwd` はプロジェクトフォルダの絶対パスに置き換えてください
-   - MCPサーバーが起動時に `.env` ファイルからAWS認証情報を自動で読み込みます
+   - 起動時に `npm install` とビルドが自動実行されます
+   - MCPサーバーが `.env` ファイルからAWS認証情報を自動で読み込みます
 3. プロジェクトフォルダ内の `skills/` フォルダに、操作ごとのスキルファイルが入っています
 
 | ファイル | 用途 |
