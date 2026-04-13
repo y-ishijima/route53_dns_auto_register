@@ -8,7 +8,7 @@ import path from 'path';
 import { LastRegistration } from './types';
 
 /** 登録情報の保存先ファイルパス */
-const UNDO_FILE = path.join(process.cwd(), '.last-registration.json');
+const UNDO_FILE = path.join(__dirname, '..', '.last-registration.json');
 
 /** 直前の登録情報をファイルに保存する */
 export function saveLastRegistration(data: LastRegistration): void {
