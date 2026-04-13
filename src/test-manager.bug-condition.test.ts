@@ -116,81 +116,63 @@ describe('バグ条件探索テスト', () => {
   });
 
   /**
-   * テスト2: listTestRecords が StartRecordName を指定すること
+   * テスト2: listTestRecords は全レコードをスキャンしてテストレコードを収集すること
    *
-   * 期待される動作（修正後）: ListResourceRecordSetsCommand に
-   * StartRecordName: '__dns_auto_test-' を指定し、テストレコード付近から
-   * スキャンを開始する。
-   *
-   * 未修正コードでの動作: StartRecordName が指定されず、ゾーン先頭から
-   * フルスキャンが行われる。
+   * Route53のDNS名ソート順はドメイン名の逆順（右から左）で行われるため、
+   * StartRecordNameによるプレフィックス最適化は正しく動作しない。
+   * 全レコードをスキャンしてテストプレフィックスに一致するレコードを収集する。
    *
    * Validates: Requirements 1.2, 2.2
    */
-  it('listTestRecords は ListResourceRecordSetsCommand に StartRecordName を指定すること', async () => {
-    // テストレコードを含むレスポンスを設定
+  it('listTestRecords は全レコードをスキャンしてテストレコードを収集すること', async () => {
+    // テストレコードと通常レコードが混在するレスポンス
     mockSend.mockResolvedValue(
       createListResponse([
-        { name: '__dns_auto_test-001', type: 'A', value: '192.168.1.1' },
+        { name: 's1105.yamaokaya.net', type: 'A', value: '192.168.1.1' },
+        { name: '__dns_auto_test-s9999.yamaokaya.net', type: 'TXT', value: '"dGVzdA=="' },
       ])
     );
 
-    await testManager.listTestRecords(TEST_CONFIG.yamaokayaZoneId);
+    const records = await testManager.listTestRecords(TEST_CONFIG.yamaokayaZoneId);
 
-    // send に渡されたコマンドを取得
-    const sentCommand = mockSend.mock.calls[0][0] as ListResourceRecordSetsCommand;
-    const input = sentCommand.input;
-
-    // 期待: StartRecordName にテストプレフィックスが指定されていること
-    // 未修正コードでは StartRecordName が未指定のため、このテストは失敗する
-    expect(input.StartRecordName).toBe(TestRecordManager.TEST_PREFIX);
+    // テストプレフィックスに一致するレコードのみ収集されること
+    expect(records).toHaveLength(1);
+    expect(records[0].name).toBe('__dns_auto_test-s9999.yamaokaya.net');
+    expect(records[0].type).toBe('TXT');
   });
 
   /**
-   * テスト3: テストプレフィックス範囲外のレコード到達時にページネーションが終了すること
+   * テスト3: listTestRecords はページネーションで全ページをスキャンすること
    *
-   * 期待される動作（修正後）: テストプレフィックスに一致しないレコードが
-   * 出現した時点でページネーションを即座に終了する。
-   *
-   * 未修正コードでの動作: IsTruncated が true である限り、テストプレフィックス
-   * 範囲を超えてもページネーションが継続する（不要なページ取得）。
+   * Route53のDNS名ソート順ではテストレコードがどのページに出現するか
+   * 予測できないため、全ページをスキャンする必要がある。
    *
    * Validates: Requirements 1.3, 2.3
    */
-  it('テストプレフィックス範囲外のレコード到達時にページネーションが終了すること（早期終了）', async () => {
-    // ページ1: テストレコードを含む（IsTruncated = true で次ページあり）
+  it('listTestRecords はページネーションで全ページをスキャンすること', async () => {
+    // ページ1: 通常レコードのみ
     const page1 = createListResponse(
-      [{ name: '__dns_auto_test-001', type: 'A', value: '192.168.1.1' }],
+      [{ name: 's1105.yamaokaya.net', type: 'A', value: '192.168.1.1' }],
       true,
-      'other-record.example.com',
-      'A'
+      '__dns_auto_test-s9999.yamaokaya.net',
+      'TXT'
     );
 
-    // ページ2: テストプレフィックス範囲外のレコードのみ
+    // ページ2: テストレコードを含む
     const page2 = createListResponse(
-      [{ name: 'other-record.example.com', type: 'A', value: '10.0.0.1' }],
-      true,
-      'zzz-record.example.com',
-      'A'
-    );
-
-    // ページ3: さらに範囲外のレコード（到達すべきでない）
-    const page3 = createListResponse(
-      [{ name: 'zzz-record.example.com', type: 'A', value: '10.0.0.2' }],
+      [{ name: '__dns_auto_test-s9999.yamaokaya.net', type: 'TXT', value: '"dGVzdA=="' }],
       false
     );
 
     mockSend
       .mockResolvedValueOnce(page1)
-      .mockResolvedValueOnce(page2)
-      .mockResolvedValueOnce(page3);
+      .mockResolvedValueOnce(page2);
 
-    await testManager.listTestRecords(TEST_CONFIG.yamaokayaZoneId);
+    const records = await testManager.listTestRecords(TEST_CONFIG.yamaokayaZoneId);
 
-    // 期待: ページ2でテストプレフィックス範囲外のレコードを検出し、
-    // ページ3を取得せずにループを終了すること。
-    // つまり send の呼び出し回数は最大2回（ページ1 + ページ2で早期終了）。
-    // 未修正コードでは3回全て呼び出されるため、このテストは失敗する。
+    // 全ページをスキャンしてテストレコードを収集すること
     expect(mockSend).toHaveBeenCalledTimes(2);
+    expect(records).toHaveLength(1);
+    expect(records[0].name).toBe('__dns_auto_test-s9999.yamaokaya.net');
   });
 });

@@ -23,15 +23,10 @@ export class TestRecordManager {
     let nextName: string | undefined;
     let nextType: RRType | undefined;
 
-    // ページネーション対応でテストレコードを収集
-    // テストプレフィックス範囲を超えた場合の早期終了フラグ
-    let pastPrefixRange = false;
-
     do {
       const command = new ListResourceRecordSetsCommand({
         HostedZoneId: zoneId,
-        // 初回はテストプレフィックス位置からスキャン開始、以降はページネーション継続
-        StartRecordName: nextName ?? TestRecordManager.TEST_PREFIX,
+        ...(nextName && { StartRecordName: nextName }),
         ...(nextType && { StartRecordType: nextType }),
       });
       const response = await this.route53Client.send(command);
@@ -40,12 +35,6 @@ export class TestRecordManager {
         const name = rrs.Name ?? '';
         // Route53はFQDN末尾にドットを付与するため、除去して判定
         const cleanName = name.endsWith('.') ? name.slice(0, -1) : name;
-
-        // テストプレフィックス範囲を超えた場合、早期終了
-        if (!cleanName.startsWith(TestRecordManager.TEST_PREFIX) && cleanName > TestRecordManager.TEST_PREFIX) {
-          pastPrefixRange = true;
-          break;
-        }
 
         if (cleanName.startsWith(TestRecordManager.TEST_PREFIX)) {
           for (const rr of rrs.ResourceRecords ?? []) {
@@ -57,11 +46,6 @@ export class TestRecordManager {
             });
           }
         }
-      }
-
-      // 早期終了フラグが立っている場合、ページネーションを終了
-      if (pastPrefixRange) {
-        break;
       }
 
       if (response.IsTruncated) {
