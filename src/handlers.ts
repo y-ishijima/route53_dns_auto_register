@@ -23,6 +23,36 @@ const TEST_PREFIX = 'auto_dns_test_';
 /** テストレコード情報ファイルのパス */
 const TEST_RECORDS_FILE = resolve(__dirname, '..', 'test-records.json');
 
+/** undo情報ファイルのパス */
+const UNDO_FILE = resolve(__dirname, '..', '.last-registration.json');
+
+/**
+ * ファイルの書き込み可否を事前チェックする
+ * Route53への登録前に呼び出し、書き込みできない場合はエラーを返す
+ */
+function checkFileWritable(filePath: string): string | null {
+  try {
+    const testContent = existsSync(filePath) ? readFileSync(filePath, 'utf-8') : '';
+    writeFileSync(filePath, testContent || '{}', 'utf-8');
+    return null;
+  } catch {
+    return `ファイルの書き込みに失敗しました: ${filePath}。IT部門に連絡してください。`;
+  }
+}
+
+/**
+ * 登録前の書き込みチェック
+ * テストモード: test-records.json
+ * 本番モード: .last-registration.json
+ */
+function preflightWriteCheck(testMode: boolean): string | null {
+  if (testMode) {
+    return checkFileWritable(TEST_RECORDS_FILE);
+  } else {
+    return checkFileWritable(UNDO_FILE);
+  }
+}
+
 /** テストレコード情報の型 */
 interface TestRecordEntry {
   zoneId: string;
@@ -69,6 +99,12 @@ export async function handleEncodeName(
   config: Config,
 ): Promise<EncodeNameResult> {
   const { shopName, shopCode, testMode } = params;
+
+  // 書き込みチェック（Route53登録前に実施）
+  const writeError = preflightWriteCheck(testMode);
+  if (writeError) {
+    return { success: false, error: writeError };
+  }
 
   // 店舗コードバリデーション
   const codeResult = validateShopCode(shopCode);
@@ -160,6 +196,12 @@ export async function handleCreateRecords(
 ): Promise<CreateRecordsResult> {
   const { shopCode, startIp, testMode } = params;
 
+  // 書き込みチェック（Route53登録前に実施）
+  const writeError = preflightWriteCheck(testMode);
+  if (writeError) {
+    return { success: false, error: writeError };
+  }
+
   // 店舗コードバリデーション
   const codeResult = validateShopCode(shopCode);
   if (!codeResult.valid) {
@@ -240,6 +282,12 @@ export async function handleAddDevice(
   config: Config,
 ): Promise<AddDeviceResult> {
   const { shopCode, device, ip, testMode } = params;
+
+  // 書き込みチェック（Route53登録前に実施）
+  const writeError = preflightWriteCheck(testMode);
+  if (writeError) {
+    return { success: false, error: writeError };
+  }
 
   // 店舗コードバリデーション
   const codeResult = validateShopCode(shopCode);
