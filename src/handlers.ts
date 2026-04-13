@@ -304,8 +304,8 @@ export async function handleListTests(
 ): Promise<ListTestsResult> {
   const testManager = new TestRecordManager(route53Client);
 
-  const yamaokayaRecords = await testManager.listTestRecords(config.yamaokayaZoneId);
-  const menkataRecords = await testManager.listTestRecords(config.menkataZoneId);
+  const yamaokayaRecords = await testManager.listTestRecords(config.yamaokayaZoneId, 'yamaokaya.net');
+  const menkataRecords = await testManager.listTestRecords(config.menkataZoneId, 'internal.menkata.me');
 
   return {
     yamaokayaRecords,
@@ -329,8 +329,8 @@ export async function handleDeleteTests(
   const testManager = new TestRecordManager(route53Client);
 
   // テストレコード一覧を取得
-  const yamaokayaRecords = await testManager.listTestRecords(config.yamaokayaZoneId);
-  const menkataRecords = await testManager.listTestRecords(config.menkataZoneId);
+  const yamaokayaRecords = await testManager.listTestRecords(config.yamaokayaZoneId, 'yamaokaya.net');
+  const menkataRecords = await testManager.listTestRecords(config.menkataZoneId, 'internal.menkata.me');
 
   if (yamaokayaRecords.length === 0 && menkataRecords.length === 0) {
     return { deletedCount: 0, failedCount: 0, failures: [] };

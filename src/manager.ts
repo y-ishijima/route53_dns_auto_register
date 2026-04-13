@@ -36,8 +36,10 @@ export class RecordManager {
 
   /** 同一店舗コードのレコードが既に存在するか確認する */
   async checkDuplicateShopCode(shopCode: string, zoneId: string): Promise<boolean> {
+    // 店舗コード配下のレコード位置からスキャン開始（例: "s1105.yamaokaya.net"）
     const command = new ListResourceRecordSetsCommand({
       HostedZoneId: zoneId,
+      StartRecordName: `${shopCode}.yamaokaya.net`,
     });
     const response = await this.route53Client.send(command);
     const suffix = `.${shopCode}.yamaokaya.net.`;
@@ -100,7 +102,7 @@ export class RecordManager {
 
     try {
       // yamaokaya.net ゾーンに登録（AレコードとCNAMEエイリアスを1つのChangeBatchで）
-      console.log('yamaokaya.net ゾーンにレコードを登録中...');
+      console.error('yamaokaya.net ゾーンにレコードを登録中...');
       const yamaokayaRecords = [
         ...records.yamaokayaARecords,
         ...records.yamaokayaCnameAliases,
@@ -111,10 +113,10 @@ export class RecordManager {
       });
       const yamaokayaResult = await this.route53Client.send(yamaokayaCommand);
       const yamaokayaChangeId = yamaokayaResult.ChangeInfo?.Id ?? '';
-      console.log('yamaokaya.net ゾーンへの登録が完了しました。');
+      console.error('yamaokaya.net ゾーンへの登録が完了しました。');
 
       // internal.menkata.me ゾーンに登録
-      console.log('internal.menkata.me ゾーンにレコードを登録中...');
+      console.error('internal.menkata.me ゾーンにレコードを登録中...');
       let menkataChangeId: string;
       try {
         const menkataCommand = new ChangeResourceRecordSetsCommand({
@@ -155,13 +157,13 @@ export class RecordManager {
   /** yamaokaya.net ゾーンのレコードをロールバック（削除） */
   async rollbackYamaokaya(records: DnsRecord[], zoneId: string): Promise<void> {
     try {
-      console.log('yamaokaya.net ゾーンのレコードをロールバック中...');
+      console.error('yamaokaya.net ゾーンのレコードをロールバック中...');
       const command = new ChangeResourceRecordSetsCommand({
         HostedZoneId: zoneId,
         ChangeBatch: buildChangeBatch(records, 'DELETE', 'DNS Auto Register: ロールバック'),
       });
       await this.route53Client.send(command);
-      console.log('登録処理の途中でエラーが発生したため、登録済みのレコードをすべて取り消しました。レコードは登録されていません。');
+      console.error('登録処理の途中でエラーが発生したため、登録済みのレコードをすべて取り消しました。レコードは登録されていません。');
     } catch (rollbackError) {
       console.error('レコードの取り消しに失敗しました。至急IT部門に連絡してください。');
       throw rollbackError;
@@ -187,7 +189,7 @@ export class RecordManager {
   /** レコード削除（undo用、両ゾーン） */
   async deleteRecords(records: GeneratedRecords, config: Config): Promise<void> {
     // yamaokaya.net ゾーンから削除
-    console.log('yamaokaya.net ゾーンのレコードを削除中...');
+    console.error('yamaokaya.net ゾーンのレコードを削除中...');
     const yamaokayaRecords = [
       ...records.yamaokayaARecords,
       ...records.yamaokayaCnameAliases,
@@ -199,7 +201,7 @@ export class RecordManager {
     await this.route53Client.send(yamaokayaCommand);
 
     // internal.menkata.me ゾーンから削除
-    console.log('internal.menkata.me ゾーンのレコードを削除中...');
+    console.error('internal.menkata.me ゾーンのレコードを削除中...');
     const menkataCommand = new ChangeResourceRecordSetsCommand({
       HostedZoneId: config.menkataZoneId,
       ChangeBatch: buildChangeBatch(records.menkataCnameRecords, 'DELETE', 'DNS Auto Register: undo削除'),

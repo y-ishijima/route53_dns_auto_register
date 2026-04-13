@@ -17,23 +17,36 @@ export class TestRecordManager {
   /** テストレコード識別用プレフィックス */
   static readonly TEST_PREFIX = '__dns_auto_test-';
 
-  /** 指定ゾーンのテストレコード一覧を取得する */
-  async listTestRecords(zoneId: string): Promise<DnsRecord[]> {
+  /**
+   * 指定ゾーンのテストレコード一覧を取得する
+   * @param zoneId ホストゾーンID
+   * @param zoneDomain ゾーンのドメイン名（例: "yamaokaya.net"）。指定時はStartRecordNameで最適化する
+   */
+  async listTestRecords(zoneId: string, zoneDomain?: string): Promise<DnsRecord[]> {
     const records: DnsRecord[] = [];
     let nextName: string | undefined;
     let nextType: RRType | undefined;
 
+    // 初回のStartRecordName: ゾーンドメインが指定されていればFQDN形式で最適化
+    const initialStartName = zoneDomain
+      ? `${TestRecordManager.TEST_PREFIX}.${zoneDomain}`
+      : undefined;
+
+    let isFirstPage = true;
+
     do {
       const command = new ListResourceRecordSetsCommand({
         HostedZoneId: zoneId,
-        ...(nextName && { StartRecordName: nextName }),
-        ...(nextType && { StartRecordType: nextType }),
+        ...(isFirstPage && initialStartName && { StartRecordName: initialStartName }),
+        ...(!isFirstPage && nextName && { StartRecordName: nextName }),
+        ...(!isFirstPage && nextType && { StartRecordType: nextType }),
       });
+      isFirstPage = false;
       const response = await this.route53Client.send(command);
 
+      let pastPrefixRange = false;
       for (const rrs of response.ResourceRecordSets ?? []) {
         const name = rrs.Name ?? '';
-        // Route53はFQDN末尾にドットを付与するため、除去して判定
         const cleanName = name.endsWith('.') ? name.slice(0, -1) : name;
 
         if (cleanName.startsWith(TestRecordManager.TEST_PREFIX)) {
@@ -45,8 +58,14 @@ export class TestRecordManager {
               ttl: rrs.TTL ?? 300,
             });
           }
+        } else if (initialStartName && records.length > 0) {
+          // テストレコードを見つけた後にプレフィックス外のレコードが出現したら早期終了
+          pastPrefixRange = true;
+          break;
         }
       }
+
+      if (pastPrefixRange) break;
 
       if (response.IsTruncated) {
         nextName = response.NextRecordName;
@@ -73,11 +92,11 @@ export class TestRecordManager {
     const { yamaokayaRecords, menkataRecords } = records;
 
     if (yamaokayaRecords.length === 0 && menkataRecords.length === 0) {
-      console.log('削除対象のテストレコードが見つかりません。');
+      console.error('削除対象のテストレコードが見つかりません。');
       return { deletedCount: 0, failedCount: 0, failures: [] };
     }
 
-    console.log('テストレコードを削除中...');
+    console.error('テストレコードを削除中...');
     let deletedCount = 0;
     const failures: Array<{ name: string; reason: string }> = [];
 
@@ -116,9 +135,9 @@ export class TestRecordManager {
     }
 
     if (failures.length > 0) {
-      console.log('テストレコードの削除に失敗しました。');
+      console.error('テストレコードの削除に失敗しました。');
     } else {
-      console.log(`テストレコードの削除が完了しました。削除件数: ${deletedCount}件`);
+      console.error(`テストレコードの削除が完了しました。削除件数: ${deletedCount}件`);
     }
 
     return { deletedCount, failedCount: failures.length, failures };
