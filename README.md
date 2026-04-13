@@ -227,6 +227,8 @@ npx dns-register delete-tests --env-file .env
 
 テストモードでは `auto_dns_test_` プレフィックス付きのレコードが登録されます。本番レコードには影響しません。テストモードでは `UPSERT` で登録されるため、同じコマンドを繰り返し実行できます。
 
+テスト登録時、レコード情報は `test-records.json` に自動保存されます。Cowork（MCPサーバー）経由の削除はこのファイルを使って高速に実行されます。CLI の `delete-tests` コマンドは Route53 を全スキャンして削除するため、`test-records.json` が失われた場合のフォールバックとして使用できます。
+
 ```bash
 # テストレコードの登録（3コマンドすべてに --test を付ける）
 npx dns-register encode-name --test --shop-name "テスト店" --shop-code s9999 --env-file .env
