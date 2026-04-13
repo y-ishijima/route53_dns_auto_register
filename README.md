@@ -50,8 +50,22 @@ Claude Desktop の Cowork 機能を使ってレコード登録を行う場合は
 > Cowork 開始時には `git pull` と `npm install` を実行して、最新の状態にしてください。
 
 1. Claude Desktop をインストールしてください（https://claude.ai からダウンロード）
-2. Claude Desktop の「コネクター」から「Desktop Commander」を追加してください
-   - Desktop Commander を使うと、AI がローカルのコマンドを実行できるようになります
+2. MCPサーバーを設定してください。Claude Desktop の設定ファイル（`claude_desktop_config.json`）に以下を追加します:
+
+```json
+{
+  "mcpServers": {
+    "dns-register": {
+      "command": "node",
+      "args": ["dist/mcp-server.js"],
+      "cwd": "/path/to/route53_dns_auto_register"
+    }
+  }
+}
+```
+
+   - `cwd` はプロジェクトフォルダの絶対パスに置き換えてください
+   - MCPサーバーが起動時に `.env` ファイルからAWS認証情報を自動で読み込みます
 3. プロジェクトフォルダ内の `skills/` フォルダに、操作ごとのスキルファイルが入っています
 
 | ファイル | 用途 |
@@ -158,11 +172,12 @@ npx dns-register encode-name --shop-name "山岡家 札幌店" --shop-code s1105
 
 | 引数 | 必須 | 説明 | 例 |
 |------|------|------|-----|
-| `--shop-name` | △ | 店舗名（ローカル実行用、内部でBase64エンコード） | `"山岡家 札幌店"` |
-| `--shop-name-base64` | △ | Base64エンコード済みの店舗名（Cowork経由用） | `5bGx5bKh5a62...` |
+| `--shop-name` | ○ | 店舗名（平文、内部でBase64エンコード） | `"山岡家 札幌店"` |
 | `--shop-code` | ○ | 店舗コード | `s1105` |
 | `--test` | - | テストモード | - |
 | `--env-file` | - | 環境変数ファイルのパス | `.env` |
+
+> `--shop-name-base64` パラメータは廃止されました。店舗名は平文で `--shop-name` に渡してください。内部でBase64エンコードされます。
 
 ### create-records コマンド
 
@@ -238,13 +253,13 @@ npx dns-register delete-tests --env-file .env
 
 ### Cowork スキルファイル（AIエージェント連携）
 
-`skills/` フォルダにスキルファイルを配置しています。ユーザーが Cowork のチャットにアップロードして使用します。Desktop Commander コネクターが必要です。
+`skills/` フォルダにスキルファイルを配置しています。ユーザーが Cowork のチャットにアップロードして使用します。MCPサーバー（`dns-register`）の設定が必要です。
 
 | ファイル | 用途 |
 |---------|------|
 | `skills/dns-register-skill.md` | 全操作（登録・テスト・取り消し・削除） |
 
-スキルファイルは `--env-file .env` で AWS 認証情報を読み込みます。各コマンド実行前にユーザに許可を求めます。
+Cowork 経由の場合、全操作はMCPツール経由で実行されます。MCPサーバーが起動時に `.env` から AWS 認証情報を自動で読み込むため、`--env-file` の指定は不要です。各操作の実行前にユーザに許可を求めます。
 
 ### IAMポリシー
 

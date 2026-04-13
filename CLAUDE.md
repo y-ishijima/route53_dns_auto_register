@@ -2,47 +2,37 @@
 
 ## ツール概要
 
-店舗のネットワーク設定を登録するツール。Claude Cowork + Desktop Commander でローカル実行する。
+店舗のネットワーク設定を登録するツール。MCPサーバー経由で直接実行する。
 
 ## 絶対ルール
 
-- Cowork 開始時に `git pull` と `npm install` を Desktop Commander で実行すること。
 - skills/ フォルダ内のファイルが更新された場合、ユーザに通知して skills ファイルの再アップロードを促すこと。
-- レコードの登録・削除・取り消しコマンドを実行する前に、必ずユーザに許可を求めること。
+- レコードの登録・削除・取り消しツールを実行する前に、必ずユーザに許可を求めること。
 - 登録または削除が完了したら、必ず結果一覧を表示すること（テスト・本番問わず）。
-- 全コマンドは Desktop Commander を用いてローカル環境で実行すること。サンドボックス内での実行は禁止。
-- Desktop Commander では cmd.exe を使用すること。PowerShell は使わない（プロファイル干渉の問題があるため）。
-- コマンド実行前に、必ず route53_dns_auto_register フォルダに移動すること。`.env` ファイルはプロジェクトディレクトリにある。
-- 一時 JS ファイルを作成しないこと。店舗名は Base64 エンコードで登録されるため、日本語のエンコーディング問題は発生しない。
-- 全コマンドに `--env-file .env` を付けること。
+- 全操作はMCPツール経由で実行すること。Desktop Commanderは使用しない。
+- 一時 JS ファイルを作成しないこと。店舗名は encode-name ツールが内部で Base64 エンコードするため、日本語のエンコーディング問題は発生しない。
 
-## コマンド一覧
+## MCPツール一覧
 
-| コマンド | 説明 | 例 |
-|---------|------|-----|
-| `encode-name` | 店舗名を Base64 エンコードし TXT レコード登録 | `npx dns-register encode-name --shop-name-base64 {Base64値} --shop-code s1105 --env-file .env` |
-| `create-records` | A レコード 62件 + menkata CNAME 62件を一括登録 | `npx dns-register create-records --shop-code s1105 --start-ip 192.168.94.65 --env-file .env` |
-| `add-device` | 機器ごとの CNAME エイリアス登録 | `npx dns-register add-device --shop-code s1105 --device rt --ip 192.168.94.66 --env-file .env` |
-| `undo` | 直前の登録を取り消し（同日以内） | `npx dns-register undo --env-file .env` |
-| `list-tests` | テストレコードの一覧表示 | `npx dns-register list-tests --env-file .env` |
-| `delete-tests` | テストレコードの一括削除 | `npx dns-register delete-tests --env-file .env` |
+| ツール | パラメータ | 説明 |
+|-------|----------|------|
+| `encode-name` | `shop_name`, `shop_code`, `test_mode?` | 店舗名TXTレコード登録 |
+| `create-records` | `shop_code`, `start_ip`, `test_mode?` | Aレコード62件+CNAME62件一括登録 |
+| `add-device` | `shop_code`, `device`, `ip`, `test_mode?` | 機器CNAMEエイリアス登録 |
+| `undo` | (なし) | 直前の登録取り消し |
+| `list-tests` | (なし) | テストレコード一覧取得 |
+| `delete-tests` | (なし) | テストレコード一括削除 |
 
 - `register` コマンドは廃止済み。`encode-name` → `create-records` → `add-device` の順で実行すること。
-- `undo` / `delete-tests` は非対話型（`--yes` フラグは不要、即実行される）。
-- テストモードは各コマンドに `--test` を付ける。
-
-## 実行方法（Desktop Commander）
-
-```
-cd /d {route53_dns_auto_registerフォルダのパス} && npx dns-register {コマンド} {引数} --env-file .env
-```
+- `undo` / `delete-tests` は非対話型（即実行される）。
+- テストモードは `test_mode: true` を指定する。
 
 ## 設定
 
 - ゾーン ID とリージョンはアプリケーション内にハードコードされている（変更不要）。
-- `.env` ファイルには AWS 認証情報のみ設定する（`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`）。
+- `.env` ファイルには AWS 認証情報のみ設定する（`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`）。MCPサーバーが起動時に自動で読み込む。
 - `config.json` は不要。
-- 機器タイプ（`--device`）は任意の文字列を受け付ける（バリデーションなし）。
+- 機器タイプ（`device`）は任意の文字列を受け付ける（バリデーションなし）。
 
 ## 使い方
 

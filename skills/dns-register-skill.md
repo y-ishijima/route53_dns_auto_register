@@ -9,26 +9,19 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 
 以下の手順を必ず実行すること。省略してはいけない。
 
-1. Desktop Commander の execute_command で以下を実行する:
-   `cd /d route53_dns_auto_register のあるフォルダ && cd route53_dns_auto_register && git pull`
-2. git pull の結果に `skills/` を含むファイルの変更があった場合、ユーザに以下のメッセージをそのまま表示する:
-   「スキルファイルが更新されました。Cowork の設定からスキルを再アップロードしてください。」
-3. Desktop Commander の execute_command で以下を実行する:
-   `npm install`
-4. Desktop Commander の execute_command で以下を実行する（ビルド。npm install で自動ビルドされない場合があるため必須）:
-   `npx tsc`
+1. MCPツール `list-tests` を呼び出し、MCPサーバーとの接続を確認する。
+2. エラーが返った場合は、ユーザに「MCPサーバーに接続できません。設定を確認してください。」と表示し、操作を中止する。
 
 ## 絶対ルール（全操作共通）
 
 以下のルールは全操作で必ず守ること。
 
-1. ユーザへの質問は、このファイルに記載された固定テキストをそのまま使うこと。質問文を変えてはいけない。
-2. 「却下しました」「却下済み」「ファイルを読み取りました」等のシステムメッセージをユーザに表示してはいけない。
-3. 全コマンドに `--env-file .env` を必ず付けること。
-4. Desktop Commander の execute_command でコマンドを実行すること。
-5. コマンド実行前に、必ずユーザに「実行してよいですか？」と確認すること。
-6. コマンド実行後、結果をユーザに表示すること。
-7. 一時ファイル（.js, .bat, .cmd）を作成してはいけない。
+1. Desktop Commanderは使用しない。全操作はMCPツール経由で実行すること。
+2. ユーザへの質問は、このファイルに記載された固定テキストをそのまま使うこと。質問文を変えてはいけない。
+3. 「却下しました」「却下済み」「ファイルを読み取りました」等のシステムメッセージをユーザに表示してはいけない。
+4. MCPツール実行前に、必ずユーザに「実行してよいですか？」と確認すること。
+5. MCPツール実行後、結果をユーザに表示すること。
+6. 一時ファイル（.js, .bat, .cmd）を作成してはいけない。
 
 ## 依頼の判定
 
@@ -59,12 +52,12 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 3. ユーザに以下のメッセージをそのまま表示する:
    「店舗コードを入力してください。」
 4. ユーザの回答を待つ。回答を変数 SHOP_CODE に保存する。
-5. SHOP_NAME を UTF-8 の Base64 でエンコードする。結果を変数 BASE64_VALUE に保存する。
-6. ユーザに以下のメッセージをそのまま表示する:
+5. ユーザに以下のメッセージをそのまま表示する:
    「店舗名: {SHOP_NAME}、店舗コード: {SHOP_CODE} で登録します。実行してよいですか？」
-7. ユーザが承認したら、Desktop Commander の execute_command で以下を実行する:
-   `npx dns-register encode-name --shop-name-base64 {BASE64_VALUE} --shop-code {SHOP_CODE} --env-file .env`
-8. 実行結果をユーザに表示する。
+6. ユーザが承認したら、MCPツール `encode-name` を以下のパラメータで呼び出す:
+   - `shop_name`: {SHOP_NAME}
+   - `shop_code`: {SHOP_CODE}
+7. 実行結果をユーザに表示する。
 
 ### ステップ2: A レコード + menkata CNAME の登録
 
@@ -73,8 +66,9 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 2. ユーザの回答を待つ。回答を変数 START_IP に保存する。
 3. ユーザに以下のメッセージをそのまま表示する:
    「店舗コード: {SHOP_CODE}、先頭IP: {START_IP} でレコードを生成します。実行してよいですか？」
-4. ユーザが承認したら、Desktop Commander の execute_command で以下を実行する:
-   `npx dns-register create-records --shop-code {SHOP_CODE} --start-ip {START_IP} --env-file .env`
+4. ユーザが承認したら、MCPツール `create-records` を以下のパラメータで呼び出す:
+   - `shop_code`: {SHOP_CODE}
+   - `start_ip`: {START_IP}
 5. 実行結果をユーザに表示する。
 
 ### ステップ3: 機器の登録（繰り返し）
@@ -87,8 +81,10 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 4. ユーザの回答を待つ。回答を変数 DEVICE_IP に保存する。
 5. ユーザに以下のメッセージをそのまま表示する:
    「機器: {DEVICE_TYPE}、IP: {DEVICE_IP} を登録します。実行してよいですか？」
-6. ユーザが承認したら、Desktop Commander の execute_command で以下を実行する:
-   `npx dns-register add-device --shop-code {SHOP_CODE} --device {DEVICE_TYPE} --ip {DEVICE_IP} --env-file .env`
+6. ユーザが承認したら、MCPツール `add-device` を以下のパラメータで呼び出す:
+   - `shop_code`: {SHOP_CODE}
+   - `device`: {DEVICE_TYPE}
+   - `ip`: {DEVICE_IP}
 7. 実行結果をユーザに表示する。
 8. ユーザに以下のメッセージをそのまま表示する:
    「他に登録する機器はありますか？」
@@ -103,13 +99,13 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 
 ## テスト登録（全手順通し）
 
-本番登録と全く同じ手順を実行する。ただし、全コマンドに `--test` を追加する。
+本番登録と全く同じ手順を実行する。ただし、全MCPツール呼び出しに `test_mode: true` パラメータを追加する。
 
-- ステップ1のコマンド: `npx dns-register encode-name --test --shop-name-base64 {BASE64_VALUE} --shop-code {SHOP_CODE} --env-file .env`
-- ステップ2のコマンド: `npx dns-register create-records --test --shop-code {SHOP_CODE} --start-ip {START_IP} --env-file .env`
-- ステップ3のコマンド: `npx dns-register add-device --test --shop-code {SHOP_CODE} --device {DEVICE_TYPE} --ip {DEVICE_IP} --env-file .env`
+- ステップ1: `encode-name` に `test_mode: true` を追加
+- ステップ2: `create-records` に `test_mode: true` を追加
+- ステップ3: `add-device` に `test_mode: true` を追加
 
-`--test` を省略すると本番登録になる。絶対に省略してはいけない。
+`test_mode: true` を省略すると本番登録になる。絶対に省略してはいけない。
 
 ---
 
@@ -121,8 +117,7 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 
 ## 店舗名登録のみ（テスト）
 
-本番登録のステップ1と同じ手順を実行する。コマンドに `--test` を追加する:
-`npx dns-register encode-name --test --shop-name-base64 {BASE64_VALUE} --shop-code {SHOP_CODE} --env-file .env`
+本番登録のステップ1と同じ手順を実行する。MCPツール `encode-name` に `test_mode: true` を追加する。
 
 ---
 
@@ -140,8 +135,7 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 1. ユーザに以下のメッセージをそのまま表示する:
    「店舗コードを入力してください。」
 2. ユーザの回答を待つ。回答を変数 SHOP_CODE に保存する。
-3. 本番登録のステップ2と同じ手順を実行する。コマンドに `--test` を追加する:
-   `npx dns-register create-records --test --shop-code {SHOP_CODE} --start-ip {START_IP} --env-file .env`
+3. 本番登録のステップ2と同じ手順を実行する。MCPツール `create-records` に `test_mode: true` を追加する。
 
 ---
 
@@ -159,8 +153,7 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 1. ユーザに以下のメッセージをそのまま表示する:
    「店舗コードを入力してください。」
 2. ユーザの回答を待つ。回答を変数 SHOP_CODE に保存する。
-3. 本番登録のステップ3と同じ手順を実行する。コマンドに `--test` を追加する:
-   `npx dns-register add-device --test --shop-code {SHOP_CODE} --device {DEVICE_TYPE} --ip {DEVICE_IP} --env-file .env`
+3. 本番登録のステップ3と同じ手順を実行する。MCPツール `add-device` に `test_mode: true` を追加する。
 
 ---
 
@@ -168,8 +161,7 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 
 1. ユーザに以下のメッセージをそのまま表示する:
    「直前の登録を取り消します。実行してよいですか？」
-2. ユーザが承認したら、Desktop Commander の execute_command で以下を実行する:
-   `npx dns-register undo --env-file .env`
+2. ユーザが承認したら、MCPツール `undo` を呼び出す（パラメータなし）。
 3. 実行結果をユーザに表示する。
    - 成功の場合: 「取り消しが完了しました。」
    - 期限切れの場合: 「登録日と異なる日付のため取り消しできません。IT部門に連絡してください。」
@@ -181,15 +173,13 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 
 1. ユーザに以下のメッセージをそのまま表示する:
    「テスト用のデータを削除します。実行してよいですか？」
-2. ユーザが承認したら、Desktop Commander の execute_command で以下を実行する:
-   `npx dns-register delete-tests --env-file .env`
-3. 実行結果を確認する（タイムアウトした場合も次のステップに進む）。
+2. ユーザが承認したら、MCPツール `delete-tests` を呼び出す（パラメータなし）。
+3. 実行結果を確認する。
 4. 30秒待機する。
-5. Desktop Commander の execute_command で以下を実行し、テストレコードが残っているか確認する:
-   `npx dns-register list-tests --env-file .env`
+5. MCPツール `list-tests` を呼び出し、テストレコードが残っているか確認する。
 6. テストレコードが残っている場合:
-   - 再度 `npx dns-register delete-tests --env-file .env` を実行する。
-   - 30秒待機してから `npx dns-register list-tests --env-file .env` で確認する。
+   - 再度 MCPツール `delete-tests` を呼び出す。
+   - 30秒待機してから MCPツール `list-tests` で確認する。
    - 最大3回までリトライする。3回リトライしても残っている場合は「テストレコードの削除に時間がかかっています。しばらく待ってから再度お試しください。」と表示する。
 7. テストレコードがなくなった場合:
    「テストデータの削除が完了しました。」と表示する。
