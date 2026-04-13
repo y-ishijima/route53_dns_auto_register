@@ -9,6 +9,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { Route53Client } from '@aws-sdk/client-route-53';
+import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
 
@@ -197,6 +198,51 @@ async function main(): Promise<void> {
       } catch (error) {
         return handleAwsError(error);
       }
+    },
+  );
+
+  // setup ツール登録
+  server.tool(
+    'setup',
+    'セットアップ: git pull、npm install、ビルドを実行して最新状態にする',
+    async () => {
+      const results: Record<string, unknown> = { success: true };
+      const cwd = process.cwd();
+      const timeout = 60_000;
+
+      // git pull
+      try {
+        const gitOutput = execSync('git pull', { cwd, timeout, encoding: 'utf-8' }).trim();
+        results.gitPull = gitOutput;
+        results.skillsUpdated = gitOutput.includes('skills/');
+      } catch {
+        results.gitPull = '失敗（ネットワーク接続を確認してください）';
+        results.skillsUpdated = false;
+      }
+
+      // npm install
+      try {
+        execSync('npm install', { cwd, timeout, encoding: 'utf-8' });
+        results.npmInstall = '完了';
+      } catch {
+        results.npmInstall = '失敗';
+        results.success = false;
+      }
+
+      // ビルド
+      try {
+        execSync('npx tsc', { cwd, timeout, encoding: 'utf-8' });
+        results.build = '完了';
+      } catch {
+        results.build = '失敗';
+        results.success = false;
+      }
+
+      if (results.skillsUpdated) {
+        results.skillsMessage = 'スキルファイルが更新されました。Coworkの設定からスキルを再アップロードしてください。';
+      }
+
+      return toMcpResponse(results);
     },
   );
 

@@ -6,6 +6,7 @@
 
 ## 絶対ルール
 
+- Cowork 開始時には MCPツール `setup` を実行して、最新の状態にすること。
 - skills/ フォルダ内のファイルが更新された場合、ユーザに通知して skills ファイルの再アップロードを促すこと。
 - レコードの登録・削除・取り消しツールを実行する前に、必ずユーザに許可を求めること。
 - 登録または削除が完了したら、必ず結果一覧を表示すること（テスト・本番問わず）。
@@ -16,6 +17,7 @@
 
 | ツール | パラメータ | 説明 |
 |-------|----------|------|
+| `setup` | (なし) | git pull・npm install・ビルドを実行 |
 | `encode-name` | `shop_name`, `shop_code`, `test_mode?` | 店舗名TXTレコード登録 |
 | `create-records` | `shop_code`, `start_ip`, `test_mode?` | Aレコード62件+CNAME62件一括登録 |
 | `add-device` | `shop_code`, `device`, `ip`, `test_mode?` | 機器CNAMEエイリアス登録 |
