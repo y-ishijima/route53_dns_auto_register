@@ -8,15 +8,52 @@ import {
   Route53Client,
   ChangeResourceRecordSetsCommand,
 } from '@aws-sdk/client-route-53';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
 import { RecordManager } from './manager';
 import { generateRecords } from './generator';
 import { validateShopName, validateShopCode, validateStartIp } from './validator';
 import { loadLastRegistration, isWithinUndoWindow, saveLastRegistration } from './undo';
 import { TestRecordManager } from './test-manager';
-import type { Config, EncodeNameParams, EncodeNameResult, CreateRecordsParams, CreateRecordsResult, AddDeviceParams, AddDeviceResult, UndoResult, ListTestsResult, DeleteTestsResult } from './types';
+import type { Config, DnsRecord, EncodeNameParams, EncodeNameResult, CreateRecordsParams, CreateRecordsResult, AddDeviceParams, AddDeviceResult, UndoResult, ListTestsResult, DeleteTestsResult } from './types';
 
 /** テストモード時のプレフィックス */
 const TEST_PREFIX = 'auto_dns_test_';
+
+/** テストレコード情報ファイルのパス */
+const TEST_RECORDS_FILE = resolve(__dirname, '..', 'test-records.json');
+
+/** テストレコード情報の型 */
+interface TestRecordEntry {
+  zoneId: string;
+  name: string;
+  type: 'A' | 'CNAME' | 'TXT';
+  value: string;
+  ttl: number;
+  registeredAt: string;
+}
+
+/** テストレコード情報をファイルから読み込む */
+function loadTestRecords(): TestRecordEntry[] {
+  try {
+    if (!existsSync(TEST_RECORDS_FILE)) return [];
+    const data = JSON.parse(readFileSync(TEST_RECORDS_FILE, 'utf-8'));
+    return data.records ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** テストレコード情報をファイルに保存する */
+function saveTestRecords(records: TestRecordEntry[]): void {
+  writeFileSync(TEST_RECORDS_FILE, JSON.stringify({ records }, null, 2), 'utf-8');
+}
+
+/** テストレコード情報をファイルに追記する */
+function appendTestRecords(newRecords: TestRecordEntry[]): void {
+  const existing = loadTestRecords();
+  saveTestRecords([...existing, ...newRecords]);
+}
 
 /**
  * encode-name ハンドラ
@@ -86,6 +123,18 @@ export async function handleEncodeName(
   });
   await route53Client.send(command);
 
+  // テストモード時: レコード情報をファイルに保存
+  if (testMode) {
+    appendTestRecords([{
+      zoneId: config.yamaokayaZoneId,
+      name: txtRecordName,
+      type: 'TXT',
+      value: txtRecordValue,
+      ttl: 300,
+      registeredAt: new Date().toISOString(),
+    }]);
+  }
+
   return {
     success: true,
     txtRecordName,
@@ -151,6 +200,19 @@ export async function handleCreateRecords(
       registeredAt: new Date().toISOString(),
       records,
     });
+  }
+
+  // テストモード時: レコード情報をファイルに保存
+  if (testMode) {
+    const now = new Date().toISOString();
+    const entries: TestRecordEntry[] = [];
+    for (const r of [...records.yamaokayaARecords, ...records.yamaokayaCnameAliases]) {
+      entries.push({ zoneId: config.yamaokayaZoneId, name: r.name, type: r.type, value: r.value, ttl: r.ttl, registeredAt: now });
+    }
+    for (const r of records.menkataCnameRecords) {
+      entries.push({ zoneId: config.menkataZoneId, name: r.name, type: r.type, value: r.value, ttl: r.ttl, registeredAt: now });
+    }
+    appendTestRecords(entries);
   }
 
   return {
@@ -241,6 +303,18 @@ export async function handleAddDevice(
   });
   await route53Client.send(command);
 
+  // テストモード時: レコード情報をファイルに保存
+  if (testMode) {
+    appendTestRecords([{
+      zoneId: config.yamaokayaZoneId,
+      name: cnameRecordName,
+      type: 'CNAME',
+      value: aRecordName,
+      ttl: config.ttl.cnameAlias,
+      registeredAt: new Date().toISOString(),
+    }]);
+  }
+
   return {
     success: true,
     cnameRecordName,
@@ -304,8 +378,8 @@ export async function handleListTests(
 ): Promise<ListTestsResult> {
   const testManager = new TestRecordManager(route53Client);
 
-  const yamaokayaRecords = await testManager.listTestRecords(config.yamaokayaZoneId, 'yamaokaya.net');
-  const menkataRecords = await testManager.listTestRecords(config.menkataZoneId, 'internal.menkata.me');
+  const yamaokayaRecords = await testManager.listTestRecords(config.yamaokayaZoneId);
+  const menkataRecords = await testManager.listTestRecords(config.menkataZoneId);
 
   return {
     yamaokayaRecords,
@@ -315,32 +389,93 @@ export async function handleListTests(
 }
 
 /**
- * delete-tests ハンドラ
- * テストレコードを一括削除する
- *
- * - TestRecordManager.listTestRecordsで両ゾーンのテストレコードを取得
- * - レコードが存在しない場合は0件結果を返す
- * - TestRecordManager.deleteAllTestRecordsで一括削除
+ * delete-tests ハンドラ（MCP用: ファイルベース削除）
+ * テストレコード情報ファイルから読み込み、Route53 APIで直接削除する
+ * 全スキャン不要のため高速
  */
 export async function handleDeleteTests(
   route53Client: Route53Client,
   config: Config,
 ): Promise<DeleteTestsResult> {
+  const entries = loadTestRecords();
+
+  if (entries.length === 0) {
+    return { deletedCount: 0, failedCount: 0, failures: [] };
+  }
+
+  let deletedCount = 0;
+  const failures: Array<{ name: string; reason: string }> = [];
+  const remainingEntries: TestRecordEntry[] = [];
+
+  // ゾーンごとにグループ化して一括削除
+  const byZone = new Map<string, TestRecordEntry[]>();
+  for (const entry of entries) {
+    const list = byZone.get(entry.zoneId) ?? [];
+    list.push(entry);
+    byZone.set(entry.zoneId, list);
+  }
+
+  for (const [zoneId, zoneEntries] of byZone) {
+    try {
+      const command = new ChangeResourceRecordSetsCommand({
+        HostedZoneId: zoneId,
+        ChangeBatch: {
+          Comment: 'DNS Auto Register: テストレコード一括削除',
+          Changes: zoneEntries.map((e) => ({
+            Action: 'DELETE' as const,
+            ResourceRecordSet: {
+              Name: e.name,
+              Type: e.type,
+              TTL: e.ttl,
+              ResourceRecords: [{ Value: e.value }],
+            },
+          })),
+        },
+      });
+      await route53Client.send(command);
+      deletedCount += zoneEntries.length;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'テストレコードの削除に失敗しました。';
+      for (const e of zoneEntries) {
+        failures.push({ name: e.name, reason });
+        remainingEntries.push(e);
+      }
+    }
+  }
+
+  // 削除成功分をファイルから除去
+  saveTestRecords(remainingEntries);
+
+  return { deletedCount, failedCount: failures.length, failures };
+}
+
+/**
+ * delete-tests ハンドラ（CLI用: 全スキャン削除）
+ * Route53を全スキャンしてテストレコードを検出・削除する
+ * ファイル喪失時のフォールバック用
+ */
+export async function handleDeleteTestsFullScan(
+  route53Client: Route53Client,
+  config: Config,
+): Promise<DeleteTestsResult> {
   const testManager = new TestRecordManager(route53Client);
 
-  // テストレコード一覧を取得
-  const yamaokayaRecords = await testManager.listTestRecords(config.yamaokayaZoneId, 'yamaokaya.net');
-  const menkataRecords = await testManager.listTestRecords(config.menkataZoneId, 'internal.menkata.me');
+  const yamaokayaRecords = await testManager.listTestRecords(config.yamaokayaZoneId);
+  const menkataRecords = await testManager.listTestRecords(config.menkataZoneId);
 
   if (yamaokayaRecords.length === 0 && menkataRecords.length === 0) {
     return { deletedCount: 0, failedCount: 0, failures: [] };
   }
 
-  // 一括削除実行（事前取得済みレコードを渡し、内部での再取得を排除）
   const result = await testManager.deleteAllTestRecords(
     { yamaokayaRecords, menkataRecords },
     config,
   );
+
+  // 削除成功時はファイルもクリア
+  if (result.failedCount === 0) {
+    saveTestRecords([]);
+  }
 
   return {
     deletedCount: result.deletedCount,

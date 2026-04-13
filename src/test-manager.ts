@@ -18,36 +18,23 @@ export class TestRecordManager {
   static readonly TEST_PREFIX = 'auto_dns_test_';
 
   /**
-   * 指定ゾーンのテストレコード一覧を取得する
+   * 指定ゾーンのテストレコード一覧を取得する（全スキャン）
+   * Route53のDNSソート順が予測困難なため、StartRecordNameによる最適化は使用しない
    * @param zoneId ホストゾーンID
-   * @param zoneDomain ゾーンのドメイン名（例: "yamaokaya.net"）。指定時はStartRecordNameで最適化する
    */
-  async listTestRecords(zoneId: string, zoneDomain?: string): Promise<DnsRecord[]> {
+  async listTestRecords(zoneId: string): Promise<DnsRecord[]> {
     const records: DnsRecord[] = [];
     let nextName: string | undefined;
     let nextType: RRType | undefined;
 
-    // 初回のStartRecordName: ゾーンドメインが指定されていればFQDN形式で最適化
-    // テストレコードは auto_dns_test_{shopCode}.{zoneDomain} の形式
-    // Route53のDNSソートでは auto_dns_test_ の後に数字・英字が続くため、
-    // auto_dns_test_0 をStartRecordNameに指定してテストレコード付近からスキャン開始
-    const initialStartName = zoneDomain
-      ? `${TestRecordManager.TEST_PREFIX}0.${zoneDomain}`
-      : undefined;
-
-    let isFirstPage = true;
-
     do {
       const command = new ListResourceRecordSetsCommand({
         HostedZoneId: zoneId,
-        ...(isFirstPage && initialStartName && { StartRecordName: initialStartName }),
-        ...(!isFirstPage && nextName && { StartRecordName: nextName }),
-        ...(!isFirstPage && nextType && { StartRecordType: nextType }),
+        ...(nextName && { StartRecordName: nextName }),
+        ...(nextType && { StartRecordType: nextType }),
       });
-      isFirstPage = false;
       const response = await this.route53Client.send(command);
 
-      let pastPrefixRange = false;
       for (const rrs of response.ResourceRecordSets ?? []) {
         const name = rrs.Name ?? '';
         const cleanName = name.endsWith('.') ? name.slice(0, -1) : name;
@@ -61,15 +48,8 @@ export class TestRecordManager {
               ttl: rrs.TTL ?? 300,
             });
           }
-        } else if (initialStartName) {
-          // StartRecordName最適化時: プレフィックス外のレコードが出現したら早期終了
-          // テストレコードはDNSソート順で連続するため、プレフィックス外に到達したら残りは不要
-          pastPrefixRange = true;
-          break;
         }
       }
-
-      if (pastPrefixRange) break;
 
       if (response.IsTruncated) {
         nextName = response.NextRecordName;
