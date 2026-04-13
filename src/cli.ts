@@ -408,4 +408,7 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+// CLIとして直接実行された場合のみmainを呼び出す
+if (require.main === module) {
+  main();
+}
