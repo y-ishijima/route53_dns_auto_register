@@ -50,7 +50,7 @@ Claude Desktop の Cowork 機能を使ってレコード登録を行う場合は
 > Cowork 開始時には `git pull` と `npm install` を実行して、最新の状態にしてください。
 
 1. Claude Desktop をインストールしてください（https://claude.ai からダウンロード）
-2. MCPサーバーを設定してください。Claude Desktop の設定ファイル（`claude_desktop_config.json`）に以下を追加します:
+2. MCPサーバーを設定してください。`setup.bat` の実行時に自動で設定されます。手動で設定する場合は、Claude Desktop の設定ファイル（`claude_desktop_config.json`）に以下を追加します:
 
 ```json
 {
