@@ -6,10 +6,10 @@
 
 ## 絶対ルール
 
-- Cowork 開始時には `git pull && npm install && npx tsc` を実行して、最新の状態にすること。
+- Cowork 開始時には、まず `git pull && npm install && npx tsc` を実行して最新の状態にし、その後 `.claude/skills/dns-register/SKILL.md` を読み込むこと。この順番を必ず守ること。
 - レコードの登録・削除・取り消しツールを実行する前に、必ずユーザに許可を求めること。
 - 登録または削除が完了したら、必ず結果一覧を表示すること（テスト・本番問わず）。
-- 全操作はCLIコマンド経由で実行すること。Desktop Commanderは使用しない。
+- 全操作はCLIコマンド経由で実行すること。
 - 一時 JS ファイルを作成しないこと。店舗名は encode-name コマンドが内部で Base64 エンコードするため、日本語のエンコーディング問題は発生しない。
 
 ## CLIコマンド一覧
@@ -37,7 +37,7 @@
 
 ## 使い方
 
-Cowork 開始時に `.claude/skills/dns-register/SKILL.md` を読み込み、その手順に従って操作を実行すること。
+上記の絶対ルールに従い、`git pull` 完了後に `.claude/skills/dns-register/SKILL.md` の手順に従って操作を実行すること。
 
 ## バリデーションルール
 
