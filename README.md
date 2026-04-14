@@ -47,7 +47,7 @@ AWS_SESSION_TOKEN=（IT部門から受け取ったセッショントークン）
 
 Claude Desktop の Cowork 機能を使ってレコード登録を行う場合は、以下の準備が必要です。
 
-> Cowork 開始時には `git pull && npm install && npx tsc` を実行して、最新の状態にしてください。
+> ツールの更新がある場合は、ローカルで `setup.bat` を実行してください（`git pull` + ビルドが自動実行されます）。
 
 1. Claude Desktop をインストールしてください（https://claude.ai からダウンロード）
 2. Cowork でプロジェクトフォルダをワークスペースとして開いてください

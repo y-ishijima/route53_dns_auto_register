@@ -7,7 +7,7 @@ echo ============================================
 echo.
 
 REM --- 1. Node.js チェック・自動インストール ---
-echo [1/3] Node.js を確認中...
+echo [1/4] Node.js を確認中...
 where node >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo Node.js がインストールされていません。自動インストールします...
@@ -24,8 +24,17 @@ if %ERRORLEVEL% NEQ 0 (
 )
 echo   OK
 
-REM --- 2. npm install ---
-echo [2/3] 依存関係をインストール中...
+REM --- 2. git pull ---
+echo [2/4] 最新のソースコードを取得中...
+git pull
+if %ERRORLEVEL% NEQ 0 (
+    echo git pull に失敗しました。ネットワーク接続を確認してください。
+    pause
+    exit /b 1
+)
+
+REM --- 3. npm install ---
+echo [3/4] 依存関係をインストール中...
 call npm install
 if %ERRORLEVEL% NEQ 0 (
     echo セットアップ中にエラーが発生しました。IT部門に連絡してください。
@@ -33,8 +42,8 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM --- 3. ビルド ---
-echo [3/3] ビルド中...
+REM --- 4. ビルド ---
+echo [4/4] ビルド中...
 call npx tsc
 if %ERRORLEVEL% NEQ 0 (
     echo ビルド中にエラーが発生しました。IT部門に連絡してください。
