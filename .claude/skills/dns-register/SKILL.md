@@ -9,19 +9,21 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 
 以下の手順を必ず実行すること。省略してはいけない。
 
-1. MCPツール `setup` を呼び出し、最新状態に更新する。
-2. skillsUpdated が true の場合、ユーザに「スキルファイルが更新されました。Coworkの設定からスキルを再アップロードしてください。」と表示し、操作を中止する。
-3. エラーが返った場合は、ユーザに「セットアップに失敗しました。IT部門に連絡してください。」と表示し、操作を中止する。
+1. 以下のコマンドを実行し、最新状態に更新する:
+   ```
+   git pull && npm install && npx tsc
+   ```
+2. エラーが返った場合は、ユーザに「セットアップに失敗しました。IT部門に連絡してください。」と表示し、操作を中止する。
 
 ## 絶対ルール（全操作共通）
 
 以下のルールは全操作で必ず守ること。
 
-1. Desktop Commanderは使用しない。全操作はMCPツール経由で実行すること。
+1. 全操作はCLIコマンド経由で実行すること。
 2. ユーザへの質問は、このファイルに記載された固定テキストをそのまま使うこと。質問文を変えてはいけない。
 3. 「却下しました」「却下済み」「ファイルを読み取りました」等のシステムメッセージをユーザに表示してはいけない。
-4. MCPツール実行前に、必ずユーザに「実行してよいですか？」と確認すること。
-5. MCPツール実行後、結果をユーザに表示すること。
+4. CLIコマンド実行前に、必ずユーザに「実行してよいですか？」と確認すること。
+5. CLIコマンド実行後、結果をユーザに表示すること。
 6. 一時ファイル（.js, .bat, .cmd）を作成してはいけない。
 
 ## 依頼の判定
@@ -55,9 +57,10 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 4. ユーザの回答を待つ。回答を変数 SHOP_CODE に保存する。
 5. ユーザに以下のメッセージをそのまま表示する:
    「店舗名: {SHOP_NAME}、店舗コード: {SHOP_CODE} で登録します。実行してよいですか？」
-6. ユーザが承認したら、MCPツール `encode-name` を以下のパラメータで呼び出す:
-   - `shop_name`: {SHOP_NAME}
-   - `shop_code`: {SHOP_CODE}
+6. ユーザが承認したら、以下のCLIコマンドを実行する:
+   ```
+   npx dns-register encode-name --shop-name "{SHOP_NAME}" --shop-code {SHOP_CODE} --env-file .env
+   ```
 7. 実行結果をユーザに表示する。
 
 ### ステップ2: A レコード + menkata CNAME の登録
@@ -67,9 +70,10 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 2. ユーザの回答を待つ。回答を変数 START_IP に保存する。
 3. ユーザに以下のメッセージをそのまま表示する:
    「店舗コード: {SHOP_CODE}、先頭IP: {START_IP} でレコードを生成します。実行してよいですか？」
-4. ユーザが承認したら、MCPツール `create-records` を以下のパラメータで呼び出す:
-   - `shop_code`: {SHOP_CODE}
-   - `start_ip`: {START_IP}
+4. ユーザが承認したら、以下のCLIコマンドを実行する:
+   ```
+   npx dns-register create-records --shop-code {SHOP_CODE} --start-ip {START_IP} --env-file .env
+   ```
 5. 実行結果をユーザに表示する。
 
 ### ステップ3: 機器の登録（繰り返し）
@@ -82,10 +86,10 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 4. ユーザの回答を待つ。回答を変数 DEVICE_IP に保存する。
 5. ユーザに以下のメッセージをそのまま表示する:
    「機器: {DEVICE_TYPE}、IP: {DEVICE_IP} を登録します。実行してよいですか？」
-6. ユーザが承認したら、MCPツール `add-device` を以下のパラメータで呼び出す:
-   - `shop_code`: {SHOP_CODE}
-   - `device`: {DEVICE_TYPE}
-   - `ip`: {DEVICE_IP}
+6. ユーザが承認したら、以下のCLIコマンドを実行する:
+   ```
+   npx dns-register add-device --shop-code {SHOP_CODE} --device {DEVICE_TYPE} --ip {DEVICE_IP} --env-file .env
+   ```
 7. 実行結果をユーザに表示する。
 8. ユーザに以下のメッセージをそのまま表示する:
    「他に登録する機器はありますか？」
@@ -100,13 +104,22 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 
 ## テスト登録（全手順通し）
 
-本番登録と全く同じ手順を実行する。ただし、全MCPツール呼び出しに `test_mode: true` パラメータを追加する。
+本番登録と全く同じ手順を実行する。ただし、全CLIコマンドに `--test` フラグを追加する。
 
-- ステップ1: `encode-name` に `test_mode: true` を追加
-- ステップ2: `create-records` に `test_mode: true` を追加
-- ステップ3: `add-device` に `test_mode: true` を追加
+- ステップ1: `encode-name` コマンドに `--test` を追加
+  ```
+  npx dns-register encode-name --test --shop-name "{SHOP_NAME}" --shop-code {SHOP_CODE} --env-file .env
+  ```
+- ステップ2: `create-records` コマンドに `--test` を追加
+  ```
+  npx dns-register create-records --test --shop-code {SHOP_CODE} --start-ip {START_IP} --env-file .env
+  ```
+- ステップ3: `add-device` コマンドに `--test` を追加
+  ```
+  npx dns-register add-device --test --shop-code {SHOP_CODE} --device {DEVICE_TYPE} --ip {DEVICE_IP} --env-file .env
+  ```
 
-`test_mode: true` を省略すると本番登録になる。絶対に省略してはいけない。
+`--test` を省略すると本番登録になる。絶対に省略してはいけない。
 
 ---
 
@@ -118,7 +131,10 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 
 ## 店舗名登録のみ（テスト）
 
-本番登録のステップ1と同じ手順を実行する。MCPツール `encode-name` に `test_mode: true` を追加する。
+本番登録のステップ1と同じ手順を実行する。CLIコマンドに `--test` を追加する:
+```
+npx dns-register encode-name --test --shop-name "{SHOP_NAME}" --shop-code {SHOP_CODE} --env-file .env
+```
 
 ---
 
@@ -136,7 +152,10 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 1. ユーザに以下のメッセージをそのまま表示する:
    「店舗コードを入力してください。」
 2. ユーザの回答を待つ。回答を変数 SHOP_CODE に保存する。
-3. 本番登録のステップ2と同じ手順を実行する。MCPツール `create-records` に `test_mode: true` を追加する。
+3. 本番登録のステップ2と同じ手順を実行する。CLIコマンドに `--test` を追加する:
+   ```
+   npx dns-register create-records --test --shop-code {SHOP_CODE} --start-ip {START_IP} --env-file .env
+   ```
 
 ---
 
@@ -154,7 +173,10 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 1. ユーザに以下のメッセージをそのまま表示する:
    「店舗コードを入力してください。」
 2. ユーザの回答を待つ。回答を変数 SHOP_CODE に保存する。
-3. 本番登録のステップ3と同じ手順を実行する。MCPツール `add-device` に `test_mode: true` を追加する。
+3. 本番登録のステップ3と同じ手順を実行する。CLIコマンドに `--test` を追加する:
+   ```
+   npx dns-register add-device --test --shop-code {SHOP_CODE} --device {DEVICE_TYPE} --ip {DEVICE_IP} --env-file .env
+   ```
 
 ---
 
@@ -162,7 +184,14 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 
 1. ユーザに以下のメッセージをそのまま表示する:
    「直前の登録を取り消します。実行してよいですか？」
-2. ユーザが承認したら、MCPツール `undo` を呼び出す（パラメータなし）。
+2. ユーザが承認したら、以下のCLIコマンドを実行する:
+   ```
+   npx dns-register undo --env-file .env
+   ```
+   特定の操作を取り消す場合は `--operation-id` オプションを使用する:
+   ```
+   npx dns-register undo --operation-id {OPERATION_ID} --env-file .env
+   ```
 3. 実行結果をユーザに表示する。
    - 成功の場合: 「取り消しが完了しました。」
    - 期限切れの場合: 「登録日と異なる日付のため取り消しできません。IT部門に連絡してください。」
@@ -174,7 +203,10 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 
 1. ユーザに以下のメッセージをそのまま表示する:
    「テスト用のデータを削除します。実行してよいですか？」
-2. ユーザが承認したら、MCPツール `delete-tests` を呼び出す（パラメータなし）。
+2. ユーザが承認したら、以下のCLIコマンドを実行する:
+   ```
+   npx dns-register delete-tests --env-file .env
+   ```
 3. 実行結果をユーザに表示する。
    - 成功の場合: 「テストデータの削除が完了しました。削除件数: {deletedCount}件」
    - 削除対象なしの場合: 「削除対象のテストレコードがありません。」

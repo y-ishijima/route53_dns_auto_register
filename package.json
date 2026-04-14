@@ -4,8 +4,7 @@
   "description": "Route53 DNS登録CLIツール - 店舗ごとのDNSレコードを登録するCLIツール",
   "main": "dist/cli.js",
   "bin": {
-    "dns-register": "dist/cli.js",
-    "dns-register-mcp": "dist/mcp-server.js"
+    "dns-register": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
@@ -14,9 +13,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-route-53": "^3.700.0",
-    "@inquirer/prompts": "^7.0.0",
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^4.3.6"
+    "@inquirer/prompts": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
