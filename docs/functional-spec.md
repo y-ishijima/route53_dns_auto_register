@@ -25,14 +25,15 @@
 ### 前提条件
 
 - Git がインストール済み
+- Claude Desktop がインストール済み
 - インターネット接続
 
 ### 手順
 
-1. IT部門から受け取った `setup.bat` をダブルクリック
-   - Git の存在確認
-   - Node.js の存在確認（未インストール時は自動インストール）
-   - `git clone`（PAT付きURL）でプロジェクトをダウンロード
+1. コマンドプロンプトまたはターミナルで以下を実行:
+   ```
+   git clone https://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@github.com/y-ishijima/route53_dns_auto_register.git
+   ```
 2. `route53_dns_auto_register/.env` に AWS 認証情報を設定
 3. Claude Desktop の Cowork でプロジェクトフォルダを開く
 4. Cowork が自動で `git pull && npm install && npx tsc` を実行し、スキルファイルを読み込む
@@ -453,6 +454,6 @@ Cowork用のガイド・ルールファイル。絶対ルール、CLIコマン�
 |------|------|
 | OS | Windows 10以降 |
 | Git | インストール済み |
-| Node.js | v22.x (LTS)（setup.batで自動インストール） |
+| Node.js | Cowork仮想環境に標準搭載（ローカルインストール不要） |
 | Claude Desktop | Cowork機能対応版 |
 | ネットワーク | インターネット接続必須 |
