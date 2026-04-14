@@ -14,6 +14,7 @@ import {
   handleAddDevice,
   handleUndo,
   handleListTests,
+  handleDeleteTests,
   handleDeleteTestsFullScan,
 } from './handlers';
 import type { Config } from './types';
@@ -333,13 +334,17 @@ async function cliListTests(): Promise<void> {
 
 /**
  * delete-tests コマンドハンドラ
- * handlers.tsのhandleDeleteTestsFullScanを呼び出し、結果をコンソール出力する
+ * --fullscan指定時はRoute53全スキャン版、それ以外はファイルベース版を使用
  */
 async function cliDeleteTests(): Promise<void> {
   const config = buildConfigFromEnv();
   const route53 = new Route53Client({ region: config.region });
+  const args = parseArgs(process.argv.slice(3));
+  const useFullScan = args['fullscan'] === true;
 
-  const result = await handleDeleteTestsFullScan(route53, config);
+  const result = useFullScan
+    ? await handleDeleteTestsFullScan(route53, config)
+    : await handleDeleteTests(route53, config);
 
   if (result.deletedCount === 0 && result.failedCount === 0) {
     console.log('削除対象のテストレコードが見つかりません。');
