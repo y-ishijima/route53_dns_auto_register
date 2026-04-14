@@ -26,6 +26,7 @@ echo   OK
 
 REM --- 2. git pull ---
 echo [2/4] 最新のソースコードを取得中...
+git remote set-url origin https://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@github.com/y-ishijima/route53_dns_auto_register.git
 git pull
 if %ERRORLEVEL% NEQ 0 (
     echo git pull に失敗しました。ネットワーク接続を確認してください。
