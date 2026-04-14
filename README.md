@@ -9,63 +9,35 @@
 
 ## はじめかた
 
-### 必要なもの
-
-- Git（https://git-scm.com からインストール）
-- Claude Desktop（https://claude.ai からダウンロード）
-
 ### セットアップ手順
 
-1. デスクトップの何もないところを右クリックし、「ターミナルで開く」を選択してください
-   - 黒い画面（ターミナル）が開きます
-2. 以下のコマンドをコピーして、ターミナルに貼り付けてください（右クリック → 貼り付け）:
+1. Claude Desktop をインストールしてください
+   - https://claude.ai/download にアクセスし、「Windows」を選択してインストーラ（Claude Setup.exe）をダウンロードしてください
+   - ダウンロードしたファイルをダブルクリックして実行し、画面の案内に従ってインストールしてください
+2. Windows キーを押して「cmd」と入力し、「コマンドプロンプト」を選択して開いてください
+3. 以下のコマンドをコピーして貼り付け、Enter キーを押してください。Git がインストールされます:
 
 ```
-git clone https://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@github.com/y-ishijima/route53_dns_auto_register.git
+winget install --id Git.Git -e --source winget
 ```
 
-3. Enter キーを押してください。ダウンロードが始まります
-4. 「done」と表示されたら完了です。デスクトップに `route53_dns_auto_register` フォルダが作成されます
-5. IT部門から受け取った `.env` ファイルを `route53_dns_auto_register` フォルダ内に配置してください
-6. Claude Desktop を開き、Cowork で `route53_dns_auto_register` フォルダをワークスペースとして開いてください
-7. 「登録して」と伝えるだけで操作が開始されます
+4. コマンドプロンプトを一度閉じて、再度開いてください（Git を認識させるため）
+5. 以下のコマンドをコピーして貼り付け、Enter キーを押してください。ツールがダウンロードされます:
+
+```
+git clone https://github.com/y-ishijima/route53_dns_auto_register.git
+```
+
+6. 「done」と表示されたら完了です
+7. IT部門から受け取った `.env` ファイルを `route53_dns_auto_register` フォルダ内に配置してください
+8. Claude Desktop を開き、Cowork で `route53_dns_auto_register` フォルダをワークスペースとして開いてください
+9. 「登録して」と伝えるだけで操作が開始されます
 
 > セットアップは初回のみ必要です。以降は Cowork を起動するだけで使えます。
-
-### AWS認証情報の設定
-
-`.env` ファイルに AWS 認証情報を設定してください。IT部門から受け取った認証情報を以下の形式で記入します:
-
-```
-AWS_ACCESS_KEY_ID=（IT部門から受け取ったキーID）
-AWS_SECRET_ACCESS_KEY=（IT部門から受け取ったシークレットキー）
-AWS_SESSION_TOKEN=（IT部門から受け取ったセッショントークン）
-```
-
-認証情報が切れた場合は、IT部門から新しい認証情報を受け取り、`.env` ファイルを更新してください。
-
-> ゾーン ID とリージョンはアプリケーション内にハードコードされているため、`.env` への設定は不要です。
-
-### スキルファイルについて
-
-スキルファイルは `.claude/skills/dns-register/SKILL.md` に配置されています。CLAUDE.mdのルールにより、Coworkが起動時に `git pull` 完了後に自動で読み込みます。手動でのアップロードは不要です。
-
-1. Claude Desktop をインストールしてください（https://claude.ai からダウンロード）
-2. Cowork でプロジェクトフォルダをワークスペースとして開いてください
-3. Cowork の仮想環境内で CLIコマンド（`npx dns-register <command> --env-file .env`）を直接実行して操作します
-4. スキルファイルは `.claude/skills/dns-register/SKILL.md` に配置されており、Cowork が自動で読み込みます
-
-| ファイル | 用途 |
-|---------|------|
-| .claude/skills/dns-register/SKILL.md | 全操作（登録・テスト・取り消し・削除） |
 
 ---
 
 ## 使いかた
-
-### スキルファイルについて
-
-スキルファイルは `.claude/skills/dns-register/SKILL.md` に配置されています。CLAUDE.mdのルールにより、Coworkがセッション開始時に自動で読み込みます。手動でのアップロードは不要です。
 
 ### レコード登録
 
@@ -99,8 +71,6 @@ AIが以下の流れで進めます。各ステップで必要な情報を聞か
 
 1. 「テストデータを削除して」と伝えてください
 
-登録日と異なる日付になると取り消しができなくなります。その場合はIT部門に連絡してください。
-
 ---
 
 ## 困ったときは
@@ -131,8 +101,6 @@ AIが以下の流れで進めます。各ステップで必要な情報を聞か
 | `npx dns-register undo` | 直前の登録を取り消し（同日以内） |
 | `npx dns-register list-tests` | テストレコードの一覧表示 |
 | `npx dns-register delete-tests` | テストレコードの一括削除 |
-
-`register` コマンドは廃止されました。実行すると廃止メッセージが表示されます。
 
 ### encode-name コマンド
 
@@ -294,8 +262,7 @@ Cowork 経由の場合、全操作はCLIコマンド経由で実行されます�
 
 | 項目 | 要件 |
 |------|------|
-| OS | Windows 10以降、macOS 13以降、Linux（Ubuntu 22.04以降） |
-| Git | インストール済み |
+| OS | Windows 10以降 |
 | Node.js | Cowork仮想環境に標準搭載（ローカルインストール不要） |
 | Claude Desktop | Cowork機能対応版 |
 | ネットワーク | インターネット接続必須 |

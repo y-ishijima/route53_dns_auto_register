@@ -32,7 +32,7 @@
 
 1. コマンドプロンプトまたはターミナルで以下を実行:
    ```
-   git clone https://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@github.com/y-ishijima/route53_dns_auto_register.git
+   git clone https://github.com/y-ishijima/route53_dns_auto_register.git
    ```
 2. `route53_dns_auto_register/.env` に AWS 認証情報を設定
 3. Claude Desktop の Cowork でプロジェクトフォルダを開く
