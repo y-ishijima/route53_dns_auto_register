@@ -37,7 +37,7 @@
 
 ## 使い方
 
-`.claude/skills/dns-register/SKILL.md` が Cowork により自動的に読み込まれる。手動アップロードは不要。
+初回のみ、Cowork の「カスタマイズ」>「スキル」から `.claude/skills/dns-register/SKILL.md` をアップロードしてください。一度アップロードすれば、以降のセッションで自動的に有効になります。
 
 ## バリデーションルール
 
