@@ -26,7 +26,7 @@ git clone https://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@github.com/y-ishijima
 
 3. Enter キーを押してください。ダウンロードが始まります
 4. 「done」と表示されたら完了です。デスクトップに `route53_dns_auto_register` フォルダが作成されます
-5. フォルダ内の `.env` ファイルをメモ帳で開き、IT部門から受け取った AWS 認証情報を設定してください（下記参照）
+5. IT部門から受け取った `.env` ファイルを `route53_dns_auto_register` フォルダ内に配置してください
 6. Claude Desktop を開き、Cowork で `route53_dns_auto_register` フォルダをワークスペースとして開いてください
 7. 「登録して」と伝えるだけで操作が開始されます
 
