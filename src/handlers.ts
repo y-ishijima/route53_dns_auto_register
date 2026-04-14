@@ -13,9 +13,9 @@ import { resolve } from 'path';
 import { RecordManager } from './manager';
 import { generateRecords } from './generator';
 import { validateShopName, validateShopCode, validateStartIp } from './validator';
-import { loadLastRegistration, isWithinUndoWindow, saveLastRegistration } from './undo';
+import { loadUndoEntries, appendUndoEntry, markAsUndone, isWithinUndoWindow, generateOperationId } from './undo';
 import { TestRecordManager } from './test-manager';
-import type { Config, DnsRecord, EncodeNameParams, EncodeNameResult, CreateRecordsParams, CreateRecordsResult, AddDeviceParams, AddDeviceResult, UndoResult, ListTestsResult, DeleteTestsResult } from './types';
+import type { Config, DnsRecord, EncodeNameParams, EncodeNameResult, CreateRecordsParams, CreateRecordsResult, AddDeviceParams, AddDeviceResult, UndoResult, ListTestsResult, DeleteTestsResult, UndoEntry } from './types';
 
 /** テストモード時のプレフィックス */
 const TEST_PREFIX = 'auto_dns_test_';
@@ -171,6 +171,25 @@ export async function handleEncodeName(
     }]);
   }
 
+  // 本番モード時: undo情報を保存
+  if (!testMode) {
+    appendUndoEntry({
+      operationId: generateOperationId(),
+      toolType: 'encode-name',
+      shopCode,
+      shopName,
+      registeredAt: new Date().toISOString(),
+      undone: false,
+      singleRecords: [{
+        zoneId: config.yamaokayaZoneId,
+        name: txtRecordName,
+        type: 'TXT',
+        value: txtRecordValue,
+        ttl: 300,
+      }],
+    });
+  }
+
   return {
     success: true,
     txtRecordName,
@@ -236,11 +255,13 @@ export async function handleCreateRecords(
 
   // undo情報保存（本番モード時のみ）
   if (!testMode) {
-    saveLastRegistration({
+    appendUndoEntry({
+      operationId: generateOperationId(),
+      toolType: 'create-records',
       shopCode,
-      shopName: '',
       registeredAt: new Date().toISOString(),
-      records,
+      undone: false,
+      generatedRecords: records,
     });
   }
 
@@ -363,6 +384,24 @@ export async function handleAddDevice(
     }]);
   }
 
+  // 本番モード時: undo情報を保存
+  if (!testMode) {
+    appendUndoEntry({
+      operationId: generateOperationId(),
+      toolType: 'add-device',
+      shopCode,
+      registeredAt: new Date().toISOString(),
+      undone: false,
+      singleRecords: [{
+        zoneId: config.yamaokayaZoneId,
+        name: cnameRecordName,
+        type: 'CNAME',
+        value: aRecordName,
+        ttl: config.ttl.cnameAlias,
+      }],
+    });
+  }
+
   return {
     success: true,
     cnameRecordName,
@@ -373,43 +412,85 @@ export async function handleAddDevice(
 
 /**
  * undo ハンドラ
- * 直前の登録を取り消す
- *
- * - loadLastRegistrationで直前の登録情報を読み込む
- * - 登録情報が存在しない場合はメッセージを返す
- * - isWithinUndoWindowで取り消し期限を判定
- * - RecordManager.deleteRecordsで両ゾーンのレコードを削除
+ * 操作IDなし: 取り消し可能な操作一覧を返す
+ * 操作IDあり: 指定された操作を取り消す
  */
 export async function handleUndo(
   route53Client: Route53Client,
   config: Config,
+  operationId?: string,
 ): Promise<UndoResult> {
-  // 直前の登録情報を読み込み
-  const lastReg = loadLastRegistration();
-  if (!lastReg) {
+  const entries = loadUndoEntries();
+  const undoable = entries.filter((e) => !e.undone && isWithinUndoWindow(e.registeredAt));
+
+  // 一覧モード（操作IDなし）
+  if (!operationId) {
+    if (undoable.length === 0) {
+      return {
+        success: false,
+        message: '取り消し可能な登録がありません。登録履歴が見つからない場合はIT部門に連絡してください。',
+      };
+    }
     return {
-      success: false,
-      message: '取り消し可能な登録がありません。',
+      success: true,
+      message: `取り消し可能な登録が${undoable.length}件あります。`,
+      entries: undoable.map((e) => ({
+        operationId: e.operationId,
+        toolType: e.toolType,
+        shopCode: e.shopCode,
+        shopName: e.shopName,
+        registeredAt: e.registeredAt,
+        recordCount: e.toolType === 'create-records'
+          ? (e.generatedRecords?.yamaokayaARecords.length ?? 0) +
+            (e.generatedRecords?.yamaokayaCnameAliases.length ?? 0) +
+            (e.generatedRecords?.menkataCnameRecords.length ?? 0)
+          : (e.singleRecords?.length ?? 0),
+      })),
     };
   }
 
-  // 取り消し期限チェック（同日以内）
-  if (!isWithinUndoWindow(lastReg.registeredAt)) {
+  // 削除モード（操作ID指定）
+  const target = undoable.find((e) => e.operationId === operationId);
+  if (!target) {
     return {
       success: false,
-      message: '登録日と異なる日付のため、取り消しできません。IT部門に連絡してください。',
+      message: '指定された操作が見つからないか、既に取り消し済みです。',
     };
   }
 
-  // レコード削除
   const manager = new RecordManager(route53Client);
-  await manager.deleteRecords(lastReg.records, config);
+
+  if (target.toolType === 'create-records' && target.generatedRecords) {
+    await manager.deleteRecords(target.generatedRecords, config);
+  } else if (target.singleRecords) {
+    for (const rec of target.singleRecords) {
+      const command = new ChangeResourceRecordSetsCommand({
+        HostedZoneId: rec.zoneId,
+        ChangeBatch: {
+          Comment: 'DNS Auto Register: undo',
+          Changes: [{
+            Action: 'DELETE',
+            ResourceRecordSet: {
+              Name: rec.name,
+              Type: rec.type,
+              TTL: rec.ttl,
+              ResourceRecords: [{ Value: rec.value }],
+            },
+          }],
+        },
+      });
+      await route53Client.send(command);
+    }
+  }
+
+  markAsUndone(operationId);
 
   return {
     success: true,
     message: 'レコードの取り消しが完了しました。',
-    shopCode: lastReg.shopCode,
-    shopName: lastReg.shopName,
+    shopCode: target.shopCode,
+    shopName: target.shopName,
+    toolType: target.toolType,
   };
 }
 

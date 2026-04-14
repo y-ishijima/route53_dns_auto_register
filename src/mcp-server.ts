@@ -164,10 +164,13 @@ async function main(): Promise<void> {
   // undo ツール登録
   server.tool(
     'undo',
-    '直前の登録取り消し: 直前に登録したDNSレコードを削除する',
-    async () => {
+    '登録取り消し: operation_idなしで取り消し可能な操作一覧を表示、operation_id指定で個別に取り消し',
+    {
+      operation_id: z.string().optional().describe('取り消す操作のID（省略時は一覧表示）'),
+    },
+    async ({ operation_id }) => {
       try {
-        const result = await handleUndo(route53Client, config);
+        const result = await handleUndo(route53Client, config, operation_id);
         return toMcpResponse(result as unknown as Record<string, unknown>);
       } catch (error) {
         return handleAwsError(error);

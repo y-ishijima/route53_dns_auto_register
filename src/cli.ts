@@ -273,16 +273,31 @@ async function cliAddDevice(args: Record<string, string | boolean>): Promise<voi
 async function cliUndo(): Promise<void> {
   const config = buildConfigFromEnv();
   const route53 = new Route53Client({ region: config.region });
+  const args = parseArgs(process.argv.slice(3));
+  const operationId = typeof args['operation-id'] === 'string' ? args['operation-id'] : undefined;
 
-  const result = await handleUndo(route53, config);
+  const result = await handleUndo(route53, config, operationId);
 
   if (!result.success) {
     console.log(result.message);
     return;
   }
 
-  console.log(`\n${result.shopName}（${result.shopCode}）の登録を取り消します。\n`);
-  console.log('レコードの取り消しが完了しました。');
+  // 一覧モード
+  if (result.entries) {
+    console.log('\n=== 取り消し可能な登録一覧 ===');
+    for (const e of result.entries) {
+      const time = new Date(e.registeredAt).toLocaleTimeString('ja-JP');
+      const name = e.shopName ? ` ${e.shopName}` : '';
+      console.log(`  ${e.operationId}  ${time}  ${e.toolType}  ${e.shopCode}${name}  (${e.recordCount}件)`);
+    }
+    console.log('==============================');
+    console.log('\n取り消すには: npx dns-register undo --operation-id <操作ID> --env-file .env');
+    return;
+  }
+
+  // 削除モード
+  console.log(`\n${result.shopName ?? ''}（${result.shopCode}）の${result.toolType}登録を取り消しました。\n`);
 }
 
 /**

@@ -76,7 +76,7 @@ export interface RegistrationResult {
   error?: string;
 }
 
-/** 直前の登録情報（undo用） */
+/** 直前の登録情報（undo用・後方互換） */
 export interface LastRegistration {
   /** 店舗コード */
   shopCode: string;
@@ -86,6 +86,48 @@ export interface LastRegistration {
   registeredAt: string;
   /** 登録したレコード群 */
   records: GeneratedRecords;
+}
+
+/** undo操作のツール種別 */
+export type UndoToolType = 'encode-name' | 'create-records' | 'add-device';
+
+/** 単体レコード情報（encode-name, add-device用） */
+export interface SingleRecord {
+  /** ゾーンID */
+  zoneId: string;
+  /** レコード名 */
+  name: string;
+  /** レコードタイプ */
+  type: 'A' | 'CNAME' | 'TXT';
+  /** レコード値 */
+  value: string;
+  /** TTL */
+  ttl: number;
+}
+
+/** undo情報の1エントリ */
+export interface UndoEntry {
+  /** 一意の操作ID */
+  operationId: string;
+  /** ツール種別 */
+  toolType: UndoToolType;
+  /** 店舗コード */
+  shopCode: string;
+  /** 店舗名（encode-nameのみ） */
+  shopName?: string;
+  /** 登録日時（ISO 8601） */
+  registeredAt: string;
+  /** undo実施フラグ */
+  undone: boolean;
+  /** 単体レコード（encode-name, add-device用） */
+  singleRecords?: SingleRecord[];
+  /** レコード群（create-records用） */
+  generatedRecords?: GeneratedRecords;
+}
+
+/** undo情報ファイルの構造 */
+export interface UndoFile {
+  entries: UndoEntry[];
 }
 
 /** encode-name ハンドラの入力 */
@@ -139,8 +181,19 @@ export interface AddDeviceResult {
 export interface UndoResult {
   success: boolean;
   message: string;
+  /** 一覧モード時: 取り消し可能な操作一覧 */
+  entries?: Array<{
+    operationId: string;
+    toolType: UndoToolType;
+    shopCode: string;
+    shopName?: string;
+    registeredAt: string;
+    recordCount: number;
+  }>;
+  /** 削除モード時: 取り消した操作の詳細 */
   shopCode?: string;
   shopName?: string;
+  toolType?: UndoToolType;
 }
 
 /** list-tests ハンドラの出力 */
