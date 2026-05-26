@@ -43,6 +43,7 @@ description: DNSレコードの登録・取り消し・テスト・削除。「�
 | 「テスト機器追加」「テスト機器登録」 | 機器登録のみ（テスト） |
 | 「取り消し」「元に戻す」 | 登録の取り消し |
 | 「テスト削除」「テストデータ削除」 | テストデータの削除 |
+| 「yamaokayaだけ登録」「menkata登録」 | ゾーン選択登録 |
 
 ---
 
@@ -212,3 +213,41 @@ npx dns-register encode-name --test --shop-name "{SHOP_NAME}" --shop-code {SHOP_
    - 成功の場合: 「テストデータの削除が完了しました。削除件数: {deletedCount}件」
    - 削除対象なしの場合: 「削除対象のテストレコードがありません。」
    - 失敗の場合: 「テストレコードの削除に失敗しました。IT部門に連絡してください。」
+
+---
+
+## ゾーン選択登録
+
+yamaokaya.net と internal.menkata.me のうち、片方のゾーンのみにレコードを登録する場合に使用する。yamaokaya.net に先に登録した後、同一店舗の internal.menkata.me に追加登録する場合に便利。
+
+### yamaokaya.net のみに登録
+
+1. ユーザに以下のメッセージをそのまま表示する:
+   「店舗コードを入力してください。」
+2. ユーザの回答を待つ。回答を変数 SHOP_CODE に保存する。
+3. ユーザに以下のメッセージをそのまま表示する:
+   「先頭IPアドレスを入力してください。」
+4. ユーザの回答を待つ。回答を変数 START_IP に保存する。
+5. ユーザに以下のメッセージをそのまま表示する:
+   「店舗コード: {SHOP_CODE}、先頭IP: {START_IP} で yamaokaya.net のみにレコードを登録します。実行してよいですか？」
+6. ユーザが承認したら、以下のCLIコマンドを実行する:
+   ```
+   npx dns-register create-records --shop-code {SHOP_CODE} --start-ip {START_IP} --zone yamaokaya --env-file .env
+   ```
+7. 実行結果をユーザに表示する。
+
+### internal.menkata.me のみに登録
+
+1. ユーザに以下のメッセージをそのまま表示する:
+   「店舗コードを入力してください。」
+2. ユーザの回答を待つ。回答を変数 SHOP_CODE に保存する。
+3. ユーザに以下のメッセージをそのまま表示する:
+   「先頭IPアドレスを入力してください。」
+4. ユーザの回答を待つ。回答を変数 START_IP に保存する。
+5. ユーザに以下のメッセージをそのまま表示する:
+   「店舗コード: {SHOP_CODE}、先頭IP: {START_IP} で internal.menkata.me のみにレコードを登録します。実行してよいですか？」
+6. ユーザが承認したら、以下のCLIコマンドを実行する:
+   ```
+   npx dns-register create-records --shop-code {SHOP_CODE} --start-ip {START_IP} --zone menkata --env-file .env
+   ```
+7. 実行結果をユーザに表示する。

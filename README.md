@@ -114,8 +114,11 @@ npx dns-register encode-name --shop-name "山岡家 札幌店" --shop-code s1105
 |------|------|------|-----|
 | `--shop-name` | ○ | 店舗名（平文、内部でBase64エンコード） | `"山岡家 札幌店"` |
 | `--shop-code` | ○ | 店舗コード | `s1105` |
+| `--zone` | - | 登録先ゾーン（`yamaokaya` のみ対応） | `yamaokaya` |
 | `--test` | - | テストモード | - |
 | `--env-file` | - | 環境変数ファイルのパス | `.env` |
+
+> encode-name は yamaokaya.net の TXT レコードのみを扱うため、`--zone menkata` を指定するとエラーになります。
 
 > `--shop-name-base64` パラメータは廃止されました。店舗名は平文で `--shop-name` に渡してください。内部でBase64エンコードされます。
 
@@ -131,8 +134,21 @@ npx dns-register create-records --shop-code s1105 --start-ip 192.168.94.65 --env
 |------|------|------|-----|
 | `--shop-code` | ○ | 店舗コード | `s1105` |
 | `--start-ip` | ○ | 先頭IPアドレス | `192.168.94.65` |
+| `--zone` | - | 登録先ゾーン（`yamaokaya` / `menkata`） | `yamaokaya` |
 | `--test` | - | テストモード | - |
 | `--env-file` | - | 環境変数ファイルのパス | `.env` |
+
+#### ゾーン選択登録
+
+片方のゾーンのみにレコードを登録する場合は `--zone` オプションを使用します。yamaokaya.net に先に登録した後、同一店舗の internal.menkata.me に追加登録する場合に使用します。
+
+```bash
+# yamaokaya.net のみに登録
+npx dns-register create-records --shop-code s1105 --start-ip 192.168.94.65 --zone yamaokaya --env-file .env
+
+# internal.menkata.me のみに登録（yamaokaya.net 登録済みでも可）
+npx dns-register create-records --shop-code s1105 --start-ip 192.168.94.65 --zone menkata --env-file .env
+```
 
 ### add-device コマンド
 
@@ -147,8 +163,11 @@ npx dns-register add-device --shop-code s1105 --device rt --ip 192.168.94.66 --e
 | `--shop-code` | ○ | 店舗コード | `s1105` |
 | `--device` | ○ | 機器タイプ | `rt` |
 | `--ip` | ○ | 機器IPアドレス | `192.168.94.66` |
+| `--zone` | - | 登録先ゾーン（`yamaokaya` のみ対応） | `yamaokaya` |
 | `--test` | - | テストモード | - |
 | `--env-file` | - | 環境変数ファイルのパス | `.env` |
+
+> add-device は yamaokaya.net の CNAME レコードのみを扱うため、`--zone menkata` を指定するとエラーになります。
 
 ### undo / delete-tests コマンド
 

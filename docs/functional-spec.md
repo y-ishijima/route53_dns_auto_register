@@ -59,6 +59,7 @@
 |-----------|------|
 | `--env-file .env` | AWS認証情報ファイルのパス |
 | `--test` | テストモード（プレフィックス付与、UPSERT使用） |
+| `--zone` | 登録先ゾーンの指定（`yamaokaya` または `menkata`）。省略時は両ゾーンに登録 |
 
 ---
 
@@ -74,6 +75,7 @@
 |------|------|------|
 | `--shop-name` | ○ | 店舗名（日本語の平文） |
 | `--shop-code` | ○ | 店舗コード |
+| `--zone` | - | 登録先ゾーン（`yamaokaya` のみ対応。`menkata` 指定時はエラー） |
 | `--test` | - | テストモード |
 | `--env-file` | - | 環境変数ファイル |
 
@@ -99,6 +101,7 @@ Aレコード62件 + menkata CNAME 62件を一括登録する。
 |------|------|------|
 | `--shop-code` | ○ | 店舗コード |
 | `--start-ip` | ○ | 先頭IPアドレス（192.168.x.x） |
+| `--zone` | - | 登録先ゾーン（`yamaokaya` / `menkata`）。省略時は両ゾーンに登録 |
 | `--test` | - | テストモード |
 | `--env-file` | - | 環境変数ファイル |
 
@@ -107,12 +110,20 @@ Aレコード62件 + menkata CNAME 62件を一括登録する。
 2. 先頭IPアドレスバリデーション
 3. 書き込みチェック
 4. レコード生成（generator.ts）
-5. 本番モード時: 重複チェック（checkDuplicateShopCode）
-6. yamaokaya.net ゾーンに登録（Aレコード + CNAMEエイリアス）
-7. internal.menkata.me ゾーンに登録（CNAME 62件）
-8. menkata登録失敗時: yamaokaya.netのレコードを自動ロールバック
-9. テストモード時: test-records.json に追記
-10. 本番モード時: .last-registration.json にundo情報を追記
+5. 本番モード時: 重複チェック
+   - `--zone menkata` 指定時: checkDuplicateMenkataCname（menkata_zone内のCNAME重複確認）
+   - `--zone yamaokaya` または未指定時: checkDuplicateShopCode（yamaokaya_zone内のAレコード重複確認）
+6. ゾーンフィルタリング（filterRecordsByZone）
+   - `--zone yamaokaya`: yamaokaya.net のレコードのみ抽出
+   - `--zone menkata`: internal.menkata.me のレコードのみ抽出
+   - 未指定: 全レコード
+7. 指定ゾーンにレコード登録
+   - `--zone yamaokaya`: yamaokaya.net ゾーンのみに登録
+   - `--zone menkata`: internal.menkata.me ゾーンのみに登録
+   - 未指定: yamaokaya.net → internal.menkata.me の順に登録
+8. menkata登録失敗時の自動ロールバック（`--zone` 未指定時のみ）
+9. テストモード時: test-records.json に追記（フィルタリング後のレコードのみ）
+10. 本番モード時: .last-registration.json にundo情報を追記（フィルタリング後のレコードのみ）
 
 **出力:** 登録レコード数、各ゾーンのChange ID
 
@@ -127,6 +138,7 @@ Aレコード62件 + menkata CNAME 62件を一括登録する。
 | `--shop-code` | ○ | 店舗コード |
 | `--device` | ○ | 機器タイプ（任意の文字列） |
 | `--ip` | ○ | 機器IPアドレス（192.168.x.x） |
+| `--zone` | - | 登録先ゾーン（`yamaokaya` のみ対応。`menkata` 指定時はエラー） |
 | `--test` | - | テストモード |
 | `--env-file` | - | 環境変数ファイル |
 
@@ -263,17 +275,22 @@ Aレコード62件 + menkata CNAME 62件を一括登録する。
 1. yamaokaya.net ゾーンに登録（Aレコード + CNAMEエイリアスを1つのChangeBatchで）
 2. internal.menkata.me ゾーンに登録（CNAME 62件）
 
+> `--zone` オプション指定時は指定されたゾーンのみに登録する。
+
 ### ロールバック
 
 menkata.me ゾーンへの登録が失敗した場合、yamaokaya.net ゾーンのレコードを自動削除（ロールバック）する。
 
+> ロールバックは `--zone` オプション未指定時（両ゾーン同時登録時）のみ動作する。`--zone yamaokaya` または `--zone menkata` 指定時はロールバック不要（片方のゾーンのみの操作のため）。
+
 ### 重複チェック
 
-| チェック対象 | メソッド | エラーメッセージ |
-|------------|---------|---------------|
-| 店舗コード（create-records） | checkDuplicateShopCode | 「この店舗コードのレコードは既に登録されています。」 |
-| TXTレコード（encode-name） | checkDuplicateTxt | 「このTXTレコードは既に登録されています。」 |
-| CNAMEレコード（add-device） | checkDuplicateCname | 「このCNAMEレコードは既に登録されています。」 |
+| チェック対象 | メソッド | 条件 | エラーメッセージ |
+|------------|---------|------|---------------|
+| 店舗コード（create-records、zone未指定/yamaokaya） | checkDuplicateShopCode | yamaokaya_zone内のAレコード | 「この店舗コードのレコードは既に登録されています。」 |
+| 店舗コード（create-records、zone=menkata） | checkDuplicateMenkataCname | menkata_zone内のCNAMEレコード | 「この店舗コードのレコードは既に登録されています。」 |
+| TXTレコード（encode-name） | checkDuplicateTxt | yamaokaya_zone内のTXTレコード | 「このTXTレコードは既に登録されています。」 |
+| CNAMEレコード（add-device） | checkDuplicateCname | yamaokaya_zone内のCNAMEレコード | 「このCNAMEレコードは既に登録されています。」 |
 
 > 重複チェックは本番モード時のみ実行。テストモードではUPSERTを使用するため不要。
 
