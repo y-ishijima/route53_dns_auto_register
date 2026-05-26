@@ -150,12 +150,18 @@ export interface CreateRecordsParams {
   shopCode: string;
   startIp: string;
   testMode: boolean;
+  /** menkata専用モード: internal.menkata.me 配下の CNAME 62件のみを部分登録 */
+  menkataOnly?: boolean;
 }
 
 /** create-records ハンドラの出力 */
 export interface CreateRecordsResult {
   success: boolean;
   recordCount?: number;
+  /** 実際に新規登録した件数（menkataOnly 部分登録時に使用） */
+  registeredCount?: number;
+  /** 既存と判定してスキップした件数（menkataOnly 部分登録時に使用） */
+  skippedCount?: number;
   yamaokayaChangeId?: string;
   menkataChangeId?: string;
   error?: string;

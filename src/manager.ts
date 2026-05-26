@@ -9,6 +9,7 @@ import {
   ListResourceRecordSetsCommand,
   GetChangeCommand,
 } from '@aws-sdk/client-route-53';
+import type { ListResourceRecordSetsCommandOutput } from '@aws-sdk/client-route-53';
 import type { Config, DnsRecord, GeneratedRecords, RegistrationResult } from './types';
 
 /** ChangeBatchのChange構造を組み立てるヘルパー */
@@ -207,5 +208,44 @@ export class RecordManager {
       ChangeBatch: buildChangeBatch(records.menkataCnameRecords, 'DELETE', 'DNS Auto Register: undo削除'),
     });
     await this.route53Client.send(menkataCommand);
+  }
+  /**
+   * 生成予定のCNAMEレコード名のうち、menkata_zone に既に存在するものを返す
+   * Type === 'CNAME' のみ対象（TXT 等は誤検出しない）
+   */
+  async getExistingMenkataCnameNames(
+    expectedNames: string[],
+    zoneId: string
+  ): Promise<Set<string>> {
+    if (expectedNames.length === 0) return new Set();
+    const normalize = (n: string) => n.replace(/\.$/, '');
+    const expectedSet = new Set(expectedNames.map(normalize));
+    const sorted = [...expectedSet].sort();
+    const maxName = sorted[sorted.length - 1];
+    const existing = new Set<string>();
+    let nextRecordName: string | undefined = sorted[0];
+    let nextRecordType: string | undefined = undefined;
+    while (nextRecordName !== undefined) {
+      const cmd: ListResourceRecordSetsCommand = new ListResourceRecordSetsCommand({
+        HostedZoneId: zoneId,
+        StartRecordName: nextRecordName,
+        StartRecordType: nextRecordType as 'A' | 'CNAME' | 'TXT' | undefined,
+      });
+      const response: ListResourceRecordSetsCommandOutput = await this.route53Client.send(cmd);
+      const records = response.ResourceRecordSets ?? [];
+      for (const rrs of records) {
+        if (rrs.Type !== 'CNAME') continue;
+        const name = normalize(rrs.Name ?? '');
+        if (expectedSet.has(name)) existing.add(name);
+      }
+      const lastName = normalize(records[records.length - 1]?.Name ?? '');
+      if (response.IsTruncated && lastName !== '' && lastName <= maxName) {
+        nextRecordName = response.NextRecordName;
+        nextRecordType = response.NextRecordType;
+      } else {
+        nextRecordName = undefined;
+      }
+    }
+    return existing;
   }
 }

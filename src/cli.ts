@@ -191,6 +191,7 @@ async function cliCreateRecords(args: Record<string, string | boolean>): Promise
   const shopCode = args['shop-code'];
   const startIp = args['start-ip'];
   const testMode = args['test'] === true;
+  const menkataOnly = args['menkata-only'] === true;
 
   // 必須引数チェック
   if (!shopCode || typeof shopCode !== 'string') {
@@ -206,7 +207,7 @@ async function cliCreateRecords(args: Record<string, string | boolean>): Promise
   const route53 = new Route53Client({ region: config.region });
 
   const result = await handleCreateRecords(
-    { shopCode, startIp, testMode },
+    { shopCode, startIp, testMode, menkataOnly },
     route53,
     config,
   );
@@ -217,6 +218,9 @@ async function cliCreateRecords(args: Record<string, string | boolean>): Promise
   }
 
   console.log(`登録レコード数: ${result.recordCount}件`);
+  if (menkataOnly && (result.registeredCount !== undefined || result.skippedCount !== undefined)) {
+    console.log(`登録: ${result.registeredCount ?? 0}件 / スキップ: ${result.skippedCount ?? 0}件`);
+  }
   if (result.yamaokayaChangeId) {
     console.log(`yamaokaya.net Change ID: ${result.yamaokayaChangeId}`);
   }

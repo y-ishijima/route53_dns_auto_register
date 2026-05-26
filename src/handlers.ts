@@ -213,7 +213,7 @@ export async function handleCreateRecords(
   route53Client: Route53Client,
   config: Config,
 ): Promise<CreateRecordsResult> {
-  const { shopCode, startIp, testMode } = params;
+  const { shopCode, startIp, testMode, menkataOnly } = params;
 
   // 書き込みチェック（Route53登録前に実施）
   const writeError = preflightWriteCheck(testMode);
@@ -238,6 +238,62 @@ export async function handleCreateRecords(
 
   // レコード生成（devicesは空オブジェクト）
   const records = generateRecords(shopCode, startIp, {}, config, testPrefix);
+
+  // menkata専用モード（本番のみ）: internal.menkata.me 配下の CNAME 62件のみを部分登録
+  if (menkataOnly && !testMode) {
+    const expectedNames = records.menkataCnameRecords.map((r) => r.name);
+    const existingNames = await manager.getExistingMenkataCnameNames(
+      expectedNames,
+      config.menkataZoneId,
+    );
+    const remaining = records.menkataCnameRecords.filter(
+      (r) => !existingNames.has(r.name.replace(/\.$/, '')),
+    );
+    const skippedCount = records.menkataCnameRecords.length - remaining.length;
+    if (remaining.length === 0) {
+      return {
+        success: false,
+        error: `生成対象 ${records.menkataCnameRecords.length} 件すべてが既に登録されています。`,
+      };
+    }
+    const menkataCommand = new ChangeResourceRecordSetsCommand({
+      HostedZoneId: config.menkataZoneId,
+      ChangeBatch: {
+        Comment: 'DNS Auto Register: menkataOnly partial register',
+        Changes: remaining.map((r) => ({
+          Action: 'CREATE' as const,
+          ResourceRecordSet: {
+            Name: r.name,
+            Type: r.type,
+            TTL: r.ttl,
+            ResourceRecords: [{ Value: r.value }],
+          },
+        })),
+      },
+    });
+    const menkataResult = await route53Client.send(menkataCommand);
+    const menkataChangeId = menkataResult.ChangeInfo?.Id ?? '';
+    // undo情報保存（残件のみ）
+    appendUndoEntry({
+      operationId: generateOperationId(),
+      toolType: 'create-records',
+      shopCode,
+      registeredAt: new Date().toISOString(),
+      undone: false,
+      generatedRecords: {
+        yamaokayaARecords: [],
+        yamaokayaCnameAliases: [],
+        menkataCnameRecords: remaining,
+      },
+    });
+    return {
+      success: true,
+      recordCount: remaining.length,
+      registeredCount: remaining.length,
+      skippedCount,
+      menkataChangeId,
+    };
+  }
 
   // 重複チェック（本番モード時のみ）
   if (!testMode) {
